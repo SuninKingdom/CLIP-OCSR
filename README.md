@@ -42,7 +42,7 @@ conda activate clip-ocsr
 
 # Install dependencies
 pip install -r requirements.txt
-
+```
 ### 3. Download Weights
 
 Download the following assets from [Zenodo](https://zenodo.org/) and place them in the root directory:
