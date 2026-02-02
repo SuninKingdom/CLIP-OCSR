@@ -76,14 +76,21 @@ For Markush structures with positional variations, CLIP-OCSR generates a templat
 ```text
 CLIP-OCSR/
 ├── src/
-│   ├── inference.py        # Main inference script (CLI supported)
-│   └── process.py          # Image preprocessing and greedy decoding logic
+│   ├── inference.py        # Main inference script (supports CLI arguments)
+│   └── process.py          # Preprocessing, greedy decoding, and Markush enumeration logic
 ├── data/
-│   ├── abbrev_group.json   # Group abbreviation and Markush mapping
-│   └── example.png        # Sample chemical structure image
-├── requirements.txt      # Python dependency list
-├── LICENSE           # Apache 2.0 License
-└── README.md           # Documentation
+│   ├── abbrev_group.json   # Mapping for abbreviated groups and Markush positional variations
+│   └── tokenizer.json      # Pre-trained pseudo-SMILES tokenizer
+├── examples/               # Directory for sample images
+│   └── example.png         # Sample chemical structure image
+├── benchmark/              # Evaluation and comparative experiments
+│   ├── eval.py             # Batch evaluation script for performance metrics
+│   └── datasets/           # Standard test sets or download instructions
+├── weights/                # Model weight storage
+│   └── download_link.md    # Link to the pre-trained ONNX model on Zenodo
+├── requirements.txt        # Python dependency list (locked to onnxruntime-gpu==1.19.2)
+├── LICENSE                 # Apache 2.0 Open Source License
+└── README.md               # Project documentation
 ```
 
 # Citation
