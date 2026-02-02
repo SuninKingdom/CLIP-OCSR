@@ -7,7 +7,7 @@
 
 Official implementation of the paper: **"Bridging the Markush gap in optical chemical structure recognition via a CLIP-derived visual backbone and synthetic data generation"**.
 
-CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure Recognition (OCSR), focusing on the high-fidelity translation of complex chemical images into SMILES strings. By combining a domain-adaptively pretrained CLIP vision encoder with a Transformer-based decoder, and leveraging our **MarkushGen** synthetic toolkit, it excels at recognizing Markush structures that challenge conventional methods.
+CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure Recognition (OCSR), focusing on the high-fidelity translation of complex chemical images into SMILES strings. By combining a **domain-adaptively pretrained** CLIP vision encoder with a Transformer-based decoder, and leveraging our **MarkushGen** synthetic toolkit, it excels at recognizing **Markush structures** that challenge conventional methods.
 
 
 
@@ -15,7 +15,7 @@ CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure 
 
 ## ✨ Key Features
 
-* **CLIP-Derived Visual Backbone**: Utilizes a CLIP-RN50 encoder pretrained on chemical image-description pairs for robust molecular feature extraction.
+* **CLIP-Derived Visual Backbone**: Utilizes a CLIP-RN50 encoder pretrained on chemical image-caption pairs for robust molecular feature extraction.
 * **Markush Structure Mastery**: Specifically optimized to handle complex structural variations ubiquitous in pharmaceutical patents:
     * **Substituent & Frequency Variations**: Achieves significantly higher accuracy than existing SOTA methods.
     * **Positional Variations**: Employing a deterministic post-processing enumeration strategy to exhaustively derive all isomer sets from symbolic predictions.
