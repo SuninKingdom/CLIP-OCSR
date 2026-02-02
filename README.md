@@ -28,8 +28,14 @@ CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure 
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-* **Python 3.8.18**
-* **CUDA 11.8+** and **cuDNN 8.9+**
+
+* **Python**: 3.8.18 (Recommended)
+* **GPU Acceleration (Optional)**: To enable GPU inference, strict version alignment between **ONNX Runtime**, **CUDA**, and **cuDNN** is essential.
+* **Verified Environment**: The following configuration has been successfully tested on our servers:
+    * **ONNX Runtime**: `onnxruntime-gpu==1.19.2`
+    * **CUDA**: 12.2
+    * **cuDNN**: 9.6.0
+* **Reference**: For other version combinations, please refer to the [Official Compatibility Matrix](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html).
 
 ### 2. Installation
 ```bash
