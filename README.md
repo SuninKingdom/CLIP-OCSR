@@ -1,6 +1,7 @@
 # CLIP-OCSR: Bridging the Markush Gap in Optical Chemical Structure Recognition
 
 [![Paper](https://img.shields.io/badge/Paper-Arxiv-red)](#) 
+[![Zenodo](https://img.shields.io/badge/Dataset-Zenodo-blue)](https://zenodo.org/your-link-here)
 [![Zenodo](https://img.shields.io/badge/Weights-Zenodo-blue)](https://zenodo.org/your-link-here)
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8.18-blue)](https://www.python.org/downloads/release/python-3818/)
