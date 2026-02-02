@@ -7,17 +7,20 @@
 
 Official implementation of the paper: **"Bridging the Markush gap in optical chemical structure recognition via a CLIP-derived visual backbone and synthetic data generation"**.
 
-CLIP-OCSR is an encoder-decoder framework designed to bridge the gap in **Markush structure** recognition by integrating a **domain-adaptively pretrained CLIP vision encoder** with a Transformer-based decoder. Powered by the MarkushGen synthetic toolkit, the model effectively masters complex structural variations, including substituent, frequency, and positional modifications. For structures with positional ambiguities, CLIP-OCSR generates symbolic predictions that are resolved through a deterministic post-processing enumeration strategy to exhaustively derive all isomer sets, providing a high-fidelity solution for translating complex chemical images into machine-readable SMILES.
+CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure Recognition (OCSR), focusing on the high-fidelity translation of complex chemical images into SMILES strings. By combining a domain-adaptively pretrained CLIP vision encoder with a Transformer-based decoder, and leveraging our **MarkushGen** synthetic toolkit, it excels at recognizing Markush structures that challenge conventional methods.
+
 
 
 ---
 
 ## ✨ Key Features
 
-* **CLIP-derived Backbone**: Initialized with a visual encoder pretrained on chemical image-description pairs, providing superior feature extraction over traditional CNNs.
-* **Markush-Specialized**: Specifically optimized to handle Markush structures, bridging a significant gap in current OCSR tools.
-* **Post-processing Toolkit**: Integrated logic to resolve abbreviated groups and enumerate positional isomers from generated pseudo-SMILES.
-* **ONNX Inference**: Optimized for high-performance inference on both CPU and NVIDIA GPUs.
+* **CLIP-Derived Visual Backbone**: Utilizes a CLIP-RN50 encoder pretrained on chemical image-description pairs for robust molecular feature extraction.
+* **Markush Structure Mastery**: Specifically optimized to handle complex structural variations ubiquitous in pharmaceutical patents:
+    * **Substituent & Frequency Variations**: Achieves significantly higher accuracy than existing SOTA methods.
+    * **Positional Variations**: Employing a deterministic post-processing enumeration strategy to exhaustively derive all isomer sets from symbolic predictions.
+* **MarkushGen Powered**: Developed with the MarkushGen toolkit to synthesize diverse training data, overcoming the scarcity of annotated Markush images.
+* **ONNX Inference**: High-performance inference scripts provided for both CPU and NVIDIA GPU (via CUDA).
 
 ---
 
@@ -25,7 +28,7 @@ CLIP-OCSR is an encoder-decoder framework designed to bridge the gap in **Markus
 
 ### 1. Prerequisites
 * **Python 3.8.18**
-* **CUDA 11.8+** and **cuDNN 8.9+** (For GPU acceleration)
+* **CUDA 11.8+** and **cuDNN 8.9+**
 
 ### 2. Installation
 ```bash
@@ -40,8 +43,7 @@ conda activate clip-ocsr
 # Install dependencies
 pip install -r requirements.txt
 
-
-# 3. Download Weights
+### 3. Download Weights
 
 Download the following assets from [Zenodo](https://zenodo.org/) and place them in the root directory:
 
