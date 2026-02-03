@@ -19,7 +19,7 @@ CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure 
 * **CLIP-Derived Visual Backbone**: Utilizes a CLIP-RN50 encoder pretrained on chemical image-caption pairs for robust molecular feature extraction.
 * **Markush Structure Mastery**: Specifically optimized to handle complex structural variations ubiquitous in pharmaceutical patents:
     * **Substituent & Frequency Variations**: Achieves significantly higher accuracy than existing SOTA methods.
-    * **Positional Variations**: Employing a deterministic post-processing enumeration strategy to exhaustively derive all isomer sets from symbolic predictions.
+    * **Position Variations**: Employing a deterministic post-processing enumeration strategy to exhaustively derive all isomer sets from symbolic predictions.
 * **MarkushGen Powered**: Developed with the MarkushGen toolkit to synthesize diverse training data, overcoming the scarcity of annotated Markush images.
 * **ONNX Inference**: High-performance inference scripts provided for both CPU and NVIDIA GPU (via CUDA).
 
