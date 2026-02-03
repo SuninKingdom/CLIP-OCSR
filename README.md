@@ -52,7 +52,7 @@ pip install -r requirements.txt
 ```
 ### 3. Download Weights
 
-Download the model weight file from [Zenodo](https://zenodo.org/) and place it in the root directory:
+Download the model weight file from [Zenodo](https://zenodo.org/) and place it in the `weights` directory:
 
 - `CLIP-OCSR.onnx`
 
