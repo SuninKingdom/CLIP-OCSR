@@ -1,6 +1,7 @@
 ### Dataset Summary: CLIP-OCSR ~100k Training Dataset
 
-This dataset provides the training corpus used for the development of **CLIP-OCSR**, an encoder-decoder framework for Optical Chemical Structure Recognition (OCSR). It contains a diverse set of chemical images designed to improve the recognition of both general molecular structures and complex Markush representations.
+This dataset provides a 100K subset of the training corpus used during the development of CLIP-OCSR.
+The full training corpus contains 5M samples and is not included in this release.
 
 * **Training Corpus ($n \approx 107k$):**
     * 80,000 **Synthetic Non-Markush** structure images.
@@ -10,3 +11,4 @@ This dataset provides the training corpus used for the development of **CLIP-OCS
 
 **For more details about implementation:** [https://github.com/YourUsername/CLIP-OCSR](https://github.com/YourUsername/CLIP-OCSR)  
 **Original Paper:** [Insert Paper Title/DOI Here]
+
