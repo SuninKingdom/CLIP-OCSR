@@ -52,10 +52,9 @@ pip install -r requirements.txt
 ```
 ### 3. Download Weights
 
-Download the following assets from [Zenodo](https://zenodo.org/) and place them in the root directory:
+Download the model weight file from [Zenodo](https://zenodo.org/) and place it in the root directory:
 
-- `demo18_aug4_resnet_ep45.onnx`: Pretrained model weights.
-- `tokenizer_demo18_MinSim_smiles.json`: Specialized tokenizer for chemical structures.
+- `CLIP-OCSR.onnx`
 
 # Usage
 
