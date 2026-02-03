@@ -2,9 +2,9 @@ import re
 from collections import Counter
 import rdkit
 from rdkit import Chem
-from test_subfrevar import *
+from eval_subfrevar import *
 
-def compare_posvar3(s1, s2, s, exclude_items):
+def compare_posvar(s1, s2, s, exclude_items):
   """
     s1: Predicted SMILES
     s2: Labels
