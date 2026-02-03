@@ -96,8 +96,3 @@ if __name__ == "__main__":
     # Print the final result
     print(f'Image: {img_name}')
     print(f'Predicted SMILES: {smiles}')
-
-
-
-
-
