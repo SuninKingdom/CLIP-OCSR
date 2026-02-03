@@ -6,7 +6,7 @@ import re
 
 # --- Image Preprocessing ---
 
-def preprocess_and_center_image(image, target_size=(384, 384)):
+def preprocess_and_center_image(image, target_size=(512, 512)):
     """
     Standardizes the input image by cropping to the chemical structure's 
     bounding box and centering it within a padded canvas.
@@ -163,3 +163,4 @@ def abbrevgroup2smiles(smiles, abbrev_group_json_file):
     # 4. Rejoin components into the final SMILES string
     final_result = '.'.join(processed_parts)
     return final_result
+
