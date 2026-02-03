@@ -43,7 +43,7 @@ def predict(file_path, onnx_session, tokenizer_tgt, max_len):
 
         # Step 4: Post-processing to replace abbreviated groups with full SMILES fragments
         # This is critical for Markush structures with positional variations.
-        smiles = abbrevgroup2smiles(smiles, "data/abbrev_group.json")
+        smiles = abbrevgroup2smiles(smiles, "./data/abbrev_group.json")
 
         return img_name, smiles
 
@@ -91,4 +91,5 @@ if __name__ == "__main__":
     # Print the final result
     print(f'Image: {img_name}')
     print(f'Predicted SMILES: {smiles}')
+
 
