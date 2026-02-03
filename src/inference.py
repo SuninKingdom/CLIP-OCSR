@@ -45,6 +45,10 @@ def predict(file_path, onnx_session, tokenizer_tgt, max_len):
         # This is critical for Markush structures with positional variations.
         smiles = abbrevgroup2smiles(smiles, "./data/abbrev_group.json")
 
+        # Post-processing of CLIP-OCSR predictions for Markush structures with position variations
+        if "$" in smiles:
+            smiles = rearrange(smiles)
+
         return img_name, smiles
 
     except FileNotFoundError:
@@ -60,7 +64,7 @@ def predict(file_path, onnx_session, tokenizer_tgt, max_len):
 # --- Model Initialization ---
 
 # Path to the pre-trained CLIP-OCSR ONNX model
-onnx_model_path = "./weights/CLIP-OCSR.onnx"
+onnx_model_path = "./weights/CLIP_OCSR.onnx"
 
 # Path to the specialized SMILES tokenizer
 tokenizer_path = "./data/tokenizer_clip_ocsr.json"
@@ -91,5 +95,6 @@ if __name__ == "__main__":
     # Print the final result
     print(f'Image: {img_name}')
     print(f'Predicted SMILES: {smiles}')
+
 
 
