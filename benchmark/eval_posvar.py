@@ -29,11 +29,11 @@ def compare_posvar(s1, s2, s, exclude_items):
             return 0
         else:
             return 0
-"
+"""
 s1 = "NC(CC1=CC([Rx])=CC=C1)COC(N([R1])[R2])=O"
 s2 = "NC(COC(N([R2])[R1])=O)CC1=CC=C([Rx$])C=C1"
 s = "[Rx]C1=CC=CC=C1CC(N)COC(=O)N([R2])[R1];NC(COC(N([R2])[R1])=O)CC1=CC=C([Rx])C=C1;[Rx]C1=CC=CC(CC(N)COC(=O)N([R2])[R1])=C1"
 exclude_items = ['C@H', 'C@', 'C@@H', 'C@@', 'N+']
 
 print(compare_posvar(s1, s2, s, exclude_items))
-"
+"""
