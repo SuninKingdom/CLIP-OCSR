@@ -161,7 +161,7 @@ def deduplicate_and_recover(smiles_list, original_placeholders, mapped_placehold
     return list(set(final_results))
 
 
-def rearrange_markush(smiles):
+def rearrange(smiles):
     """
     Main entry point: Enumerates all possible isomers for Markush structures 
     with positional variation placeholders (marked with '$').
@@ -225,7 +225,7 @@ def rearrange_markush(smiles):
 if __name__ == "__main__":
     # Example usage for Markush positional variation
     test_smiles = 'O=C(N([R6])O[R4])C1=NC=C(C(C[Y])=C1O[R3])C([X])C2=CC([R2$])=C(C=C2)[R1$]'
-    results = rearrange_markush(test_smiles)
+    results = rearrange(test_smiles)
     
     print(f"Generated {len(results)} unique isomers:")
     for i, res in enumerate(results):
