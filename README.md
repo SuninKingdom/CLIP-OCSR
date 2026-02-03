@@ -66,10 +66,6 @@ You can run inference on a single image using the provided script. The model out
 python src/inference.py --input ./data/example.png
 ```
 
-## Handling Positional Variations
-
-For Markush structures with positional variations, CLIP-OCSR generates a template string. The post-processing logic in `src/process.py` uses `data/abbrev_group.json` to expand these into full chemical representations.
-
 # Project Structure
 
 ```text
