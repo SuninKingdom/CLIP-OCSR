@@ -44,7 +44,7 @@ def predict(file_path, onnx_session, tokenizer_tgt, max_len):
 
         # Step 4: Post-processing to replace abbreviated groups with full SMILES fragments
         # This is critical for Markush structures with positional variations.
-        smiles = abbrevgroup2smiles(smiles, "./data/abbrev_group.json")
+        smiles = abbrevgroup2smiles(smiles, "abbrev_group.json")
 
         # Post-processing of CLIP-OCSR predictions for Markush structures with position variations
         if "$" in smiles:
@@ -68,7 +68,7 @@ def predict(file_path, onnx_session, tokenizer_tgt, max_len):
 onnx_model_path = "./weights/CLIP_OCSR.onnx"
 
 # Path to the specialized SMILES tokenizer
-tokenizer_path = "./data/tokenizer_clip_ocsr.json"
+tokenizer_path = "tokenizer_clip_ocsr.json"
 
 # Execution Provider: Defaults to CUDA for GPU acceleration; fallbacks to CPU if CUDA is unavailable
 # Note: Verified with CUDA 12.2 and cuDNN 9.6.0
@@ -96,6 +96,7 @@ if __name__ == "__main__":
     # Print the final result
     print(f'Image: {img_name}')
     print(f'Predicted SMILES: {smiles}')
+
 
 
 
