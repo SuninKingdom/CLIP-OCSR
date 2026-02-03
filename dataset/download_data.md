@@ -9,6 +9,6 @@ The full training corpus contains 5M samples and is not included in this release
     * 6,773 **Real-world** chemical images sourced from the **USPTO**.
 * **Configuration:** $512 \times 512$ pixels, grayscale.
 
-**For more details about implementation:** [https://github.com/YourUsername/CLIP-OCSR](https://github.com/YourUsername/CLIP-OCSR)  
-**Original Paper:** [Insert Paper Title/DOI Here]
+**For dataset downloads (Zenodo)**: https://zenodo.org/records/<RECORD_ID> [web:23]
 
+**DOI**: https://doi.org/10.5281/zenodo.<DOI_SUFFIX> [web:23]
