@@ -15,4 +15,5 @@ Please download the following files and place them as instructed:
 
 | File Name | Description | Recommended Location |
 | :--- | :--- | :--- |
-| `demo18_aug4_resnet_ep45.onnx` | The core CLIP-OCSR model weights (ONNX format). | Project Root `/` |
+| `CLIP_OCSR.onnx` | The core CLIP-OCSR model weights (ONNX format). | `weights/` |
+
