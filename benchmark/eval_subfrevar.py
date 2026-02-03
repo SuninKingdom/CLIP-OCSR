@@ -16,7 +16,7 @@ def extract_and_filter_bracket_content(s, exclude_items):
     return filtered_contents
 
 
-def compare_subfre_var(s1, s2, exclude_items):
+def compare_subfrevar(s1, s2, exclude_items):
     """
     s1: Predicted SMILES
     s2: True SMILES
@@ -71,5 +71,5 @@ s2 = "[Rp][N+]([C@@H](CCO/C1=C/C=C\C2=CC=CC=C12)C1=CC=CC=C1)(C)C"
 
 exclude_items = ['C@H', 'C@', 'C@@H', 'C@@', 'N+']
 
-print(compare_subfre_var(s1, s2, exclude_items))
+print(compare_subfrevar(s1, s2, exclude_items))
 """
