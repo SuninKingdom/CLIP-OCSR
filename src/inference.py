@@ -4,6 +4,7 @@ import onnxruntime as ort
 from tokenizers import Tokenizer
 import logging
 from process import *
+from rv_rearrange import *
 
 # --- Environment Configuration ---
 # Optional: Manually load cuDNN and CUDA runtime libraries if they are not in the system's default path.
@@ -95,6 +96,7 @@ if __name__ == "__main__":
     # Print the final result
     print(f'Image: {img_name}')
     print(f'Predicted SMILES: {smiles}')
+
 
 
 
