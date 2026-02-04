@@ -30,3 +30,12 @@ def calculate_tanimoto_similarity(mol_pred, mol_ref):
         return tanimoto_similarity
     else:
         return 0
+
+'''
+if __name__ == "__main__":
+    s1 = "O=C1N(C)C2=CC=C(C=C2C3=NC(C)=NN13)C"
+    s2 = "O=C1N(C)C2=CC=C(C=C2C3=NC(C)=NN13)C"
+    mol1 = Chem.MolFromSmiles(s1)
+    mol2 = Chem.MolFromSmiles(s1)
+    print(calculate_acc(mol1, mol2))
+'''
