@@ -32,15 +32,15 @@ def compare_subfrevar(s1, s2, exclude_items):
         if Counter(vars1) != Counter(vars2):
             return 0
         else:
-            print(f"vars1: {vars1}")
+            # print(f"vars1: {vars1}")
             vs = list(set(vars1))
-            print(f"vars: {vs}")
+            # print(f"vars: {vs}")
             # Replace [xx] with 'P(C * n)' instead of 'CC(C)C' * n, etc. in SMILES  
             for i in range(len(vs)):
                 s1 = s1.replace("[" + vs[i] + "]", "P" + "(" + "C" * (i + 1) + ")")
                 s2 = s2.replace("[" + vs[i] + "]", "P" + "(" + "C" * (i + 1) + ")")
-            print(f"s1: {s1}")
-            print(f"s2: {s2}")
+            # print(f"s1: {s1}")
+            # print(f"s2: {s2}")
             
             mol1 = Chem.MolFromSmiles(s1)
             mol2 = Chem.MolFromSmiles(s2)
@@ -54,8 +54,8 @@ def compare_subfrevar(s1, s2, exclude_items):
             canonical_smiles1 = Chem.MolToSmiles(mol1)
             canonical_smiles2 = Chem.MolToSmiles(mol2)
 
-            print(f"canonical_smiles1: {canonical_smiles1}")
-            print(f"canonical_smiles2: {canonical_smiles2}")
+            # print(f"canonical_smiles1: {canonical_smiles1}")
+            # print(f"canonical_smiles2: {canonical_smiles2}")
             
             if canonical_smiles1 == canonical_smiles2:
                 return 1
