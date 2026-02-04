@@ -65,7 +65,7 @@ def predict(file_path, onnx_session, tokenizer_tgt, max_len):
 # --- Model Initialization ---
 
 # Path to the pre-trained CLIP-OCSR ONNX model
-onnx_model_path = "./weights/CLIP_OCSR.onnx"
+onnx_model_path = "../weights/CLIP_OCSR.onnx"
 
 # Path to the specialized SMILES tokenizer
 tokenizer_path = "tokenizer_clip_ocsr.json"
@@ -88,7 +88,7 @@ max_len = 256
 # --- Example Usage ---
 if __name__ == "__main__":
     # Path to the sample chemical structure image
-    img_path = './examples/9213587.png' 
+    img_path = '../examples/9213587.png' 
     
     # Run the prediction pipeline
     img_name, smiles = predict(img_path, onnx_session, tokenizer_tgt, max_len)
@@ -96,3 +96,4 @@ if __name__ == "__main__":
     # Print the final result
     print(f'Image: {img_name}')
     print(f'Predicted SMILES: {smiles}')
+
