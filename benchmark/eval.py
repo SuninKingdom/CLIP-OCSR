@@ -37,4 +37,11 @@ if __name__ == "__main__":
     s2 = "O=C1N(C)C2=CC=C(C=C2C3=NC(C)=NN13)C"
     mol1 = Chem.MolFromSmiles(s1)
     mol2 = Chem.MolFromSmiles(s1)
-    print(calculate_acc(mol1, mol2))
+
+    print("-" * 30)
+    print(f"S1: {s1}")
+    print(f"S2: {s2}")
+    
+    acc = calculate_acc(mol1, mol2)
+    print(f"Conclusion: {'MATCH' if acc == 1.0 else 'MISMATCH'}")
+    print("-" * 30)
