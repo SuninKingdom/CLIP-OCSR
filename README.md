@@ -1,6 +1,6 @@
 # CLIP-OCSR: Bridging the Markush Gap in Optical Chemical Structure Recognition
 
-[![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-blue)](https://huggingface.co/spaces/YourUsername/CLIP-OCSR) 
+[![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-blue)](https://huggingface.co/spaces/Sunin/CLIP-OCSR)
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8.18-blue)](https://www.python.org/downloads/)
 [![RDKit](https://img.shields.io/badge/Dependency-RDKit-green)](https://www.rdkit.org/)
@@ -15,7 +15,7 @@ CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure 
 
 We provide a **ready-to-use web interface** hosted on Hugging Face Spaces. You can upload chemical images (including those with complex Markush variations) and experience the model's recognition capabilities firsthand without any local setup.
 
-👉 **[Try CLIP-OCSR on Hugging Face Spaces](https://huggingface.co/spaces/YourUsername/CLIP-OCSR)**
+👉 **[Try CLIP-OCSR on Hugging Face Spaces](https://huggingface.co/spaces/Sunin/CLIP-OCSR)**
 
 ---
 
@@ -39,7 +39,7 @@ This toolkit provides the core logic for benchmarking OCSR models, especially th
 ### Key Capabilities:
 * **Pseudo-SMILES Validation**: Logic to verify if a predicted Markush string is chemically consistent with the ground truth.
 * **Canonicalization**: Leveraging RDKit for robust molecular identity comparison.
-* **Accuracy Metrics**: Scripts to calculate Top-1 accuracy and other performance indicators across diverse datasets.
+* **Accuracy Metrics**: Scripts to compute exact match accuracy for both standard SMILES and Markush-specific Pseudo-SMILES
 
 ---
 
@@ -54,15 +54,26 @@ Ensure you have [RDKit](https://www.rdkit.org/docs/Install.html) installed. We r
 git clone [https://github.com/SuninKingdom/CLIP-OCSR.git](https://github.com/SuninKingdom/CLIP-OCSR.git)
 cd CLIP-OCSR
 
-# Install dependencies
-pip install rdkit
+# Create and activate the environment
+conda create -n clip-ocsr python=3.8.18
+conda activate clip-ocsr
 
-# Usage
+# Install dependencies
+pip install -r rdkit==2022.09.1
+
 ```
 
-### 2. Evaluation
+### 2. Evaluation examples
+```
+# 1. Standard OCSR Evaluation (non-Markush structures)
+python eval.py
 
+# 2. Markush Evaluation (Substituent & Frequency variations)
+python eval_subfrevar.py
 
+# 3. Markush Evaluation (Position variations)
+python eval_psovar.py
+```
 
 # License
 
