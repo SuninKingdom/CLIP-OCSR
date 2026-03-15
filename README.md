@@ -72,7 +72,7 @@ python eval.py
 python eval_subfrevar.py
 
 # 3. Markush Evaluation (Position variations)
-python eval_psovar.py
+python eval_posvar.py
 ```
 
 # License
