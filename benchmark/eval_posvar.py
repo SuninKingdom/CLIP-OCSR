@@ -38,7 +38,8 @@ if __name__ == "__main__":
 
     result = compare_posvar(s1, s2, s, exclude_items)
 
-    print(f"\n[Position Var Check]")
-    print(f"  Prediction: {s1}")
-    print(f"  Label:      {s2}")
-    print(f"  Status:     {'MATCH' if result == 1 else 'MISMATCH'} ({result})")
+    print(f"\n[Position Var Evaluation]")
+    print(f"  Pred:    {s1}")
+    print(f"  Label:   {s2}")
+    print(f"  Possible SMILES Set:   {len(s.split(';'))} isomers enumerated in search space.") 
+    print(f"  Result:  {'MATCH' if result == 1 else 'MISMATCH'} (Return: {result})")
