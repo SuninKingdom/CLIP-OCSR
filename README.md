@@ -57,7 +57,7 @@ conda create -n clip-ocsr python=3.8.18
 conda activate clip-ocsr
 
 # Install dependencies
-pip install -r rdkit==2022.09.1
+pip install rdkit==2022.09.1
 
 ```
 
