@@ -30,7 +30,6 @@ def compare_posvar(s1, s2, s, exclude_items):
         else:
             return 0
 
-'''
 if __name__ == "__main__":
 
     s1 = "NC(CC1=CC([Rx$])=CC=C1)COC(N([R1])[R2])=O"
@@ -39,4 +38,3 @@ if __name__ == "__main__":
     exclude_items = ['C@H', 'C@', 'C@@H', 'C@@', 'N+']
 
     print(compare_posvar(s1, s2, s, exclude_items))
-'''
