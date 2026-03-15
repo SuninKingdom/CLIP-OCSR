@@ -19,16 +19,16 @@ We provide a **ready-to-use web interface** hosted on Hugging Face Spaces. You c
 
 ---
 
-> **Note:** This repository currently provides the **Evaluation Suite** used to assess model accuracy on SMILES and Pseudo-SMILES (Markush) predictions. Model weights and training datasets are not included in the current release.
-
----
-
 ## ✨ Model Highlights
 
 * **CLIP-Derived Visual Backbone**: Utilizes a CLIP-RN50 encoder pretrained on chemical image-caption pairs for robust feature extraction.
 * **Markush Structure Mastery**: Specifically optimized to handle complex structural variations (substituent, frequency, and position variations).
 * **Deterministic Post-processing**: Employs an enumeration strategy to derive specific isomer sets from symbolic Pseudo-SMILES predictions.
 * **MarkushGen Powered**: Developed using the MarkushGen toolkit to overcome the scarcity of annotated Markush images.
+
+---
+
+> **Note:** This repository currently provides the **Evaluation Suite** used to assess model accuracy on SMILES and Pseudo-SMILES (Markush) predictions. Model weights and training datasets are not included in the current release.
 
 ---
 
@@ -46,8 +46,6 @@ This toolkit provides the core logic for benchmarking OCSR models, especially th
 ## 🚀 Getting Started
 
 ### 1. Installation
-
-Ensure you have [RDKit](https://www.rdkit.org/docs/Install.html) installed. We recommend using a Conda environment:
 
 ```bash
 # Clone the repository
