@@ -62,7 +62,9 @@ pip install -r rdkit==2022.09.1
 ```
 
 ### 2. Evaluation examples
-```
+```bash
+cd benchmark
+
 # 1. Standard OCSR Evaluation (non-Markush structures)
 python eval.py
 
