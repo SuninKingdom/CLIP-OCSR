@@ -49,7 +49,7 @@ This toolkit provides the core logic for benchmarking OCSR models, especially th
 
 ```bash
 # Clone the repository
-git clone [https://github.com/SuninKingdom/CLIP-OCSR.git](https://github.com/SuninKingdom/CLIP-OCSR.git)
+git clone https://github.com/SuninKingdom/CLIP-OCSR.git
 cd CLIP-OCSR
 
 # Create and activate the environment
