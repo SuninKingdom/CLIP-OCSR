@@ -44,28 +44,14 @@ git clone [https://github.com/Sunin/CLIP-OCSR.git](https://github.com/Sunin/CLIP
 cd CLIP-OCSR
 
 # Install dependencies
-pip install rdkit pandas numpy`CLIP-OCSR.onnx`
+pip install rdkit
 
 # Usage
 
 ## Inference
 
-See `inference.py`
-
-# Citation
-
-If you find this work helpful in your research, please cite our paper:
-
-```bibtex
-@article{yourname2026clipocsr,
-  title={Bridging the Markush gap in optical chemical structure recognition via ...},
-  author={Your Name and Others},
-  journal={Your Target Journal},
-  year={2026}
-}
 ```
 
 # License
 
 - Code: This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
-- Weights: The model weights available on Zenodo are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
