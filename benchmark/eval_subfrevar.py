@@ -71,4 +71,11 @@ if __name__ == "__main__":
 
     exclude_items = ['C@H', 'C@', 'C@@H', 'C@@', 'N+']
 
-    print(compare_subfrevar(s1, s2, exclude_items))
+    print("-" * 30)
+    print(f"S1: {s1}")
+    print(f"S2: {s2}")
+
+    acc = compare_subfrevar(s1, s2, exclude_items)
+
+    print(f"Conclusion: {'MATCH' if acc == 1.0 else 'MISMATCH'}")
+    print("-" * 30)
