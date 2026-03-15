@@ -1,5 +1,6 @@
 # CLIP-OCSR: Bridging the Markush Gap in Optical Chemical Structure Recognition
 
+[![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-blue)](https://huggingface.co/spaces/YourUsername/CLIP-OCSR) 
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8.18-blue)](https://www.python.org/downloads/)
 [![RDKit](https://img.shields.io/badge/Dependency-RDKit-green)](https://www.rdkit.org/)
@@ -7,6 +8,16 @@
 Official implementation of the paper: **"Bridging the Markush gap in optical chemical structure recognition via a CLIP-derived visual backbone and synthetic data generation"**.
 
 CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure Recognition (OCSR). It focuses on the high-fidelity translation of complex chemical images into SMILES strings, with a particular emphasis on **Markush structures** ubiquitous in pharmaceutical patents.
+
+---
+
+## 🎮 Live Demo
+
+We provide a **ready-to-use web interface** hosted on Hugging Face Spaces. You can upload chemical images (including those with complex Markush variations) and experience the model's recognition capabilities firsthand without any local setup.
+
+👉 **[Try CLIP-OCSR on Hugging Face Spaces](https://huggingface.co/spaces/YourUsername/CLIP-OCSR)**
+
+---
 
 > **Note:** This repository currently provides the **Evaluation Suite** used to assess model accuracy on SMILES and Pseudo-SMILES (Markush) predictions. Model weights and training datasets are not included in the current release.
 
@@ -40,17 +51,18 @@ Ensure you have [RDKit](https://www.rdkit.org/docs/Install.html) installed. We r
 
 ```bash
 # Clone the repository
-git clone [https://github.com/Sunin/CLIP-OCSR.git](https://github.com/Sunin/CLIP-OCSR.git)
+git clone [https://github.com/SuninKingdom/CLIP-OCSR.git](https://github.com/SuninKingdom/CLIP-OCSR.git)
 cd CLIP-OCSR
 
 # Install dependencies
 pip install rdkit
 
 # Usage
-
-## Inference
-
 ```
+
+### 2. Evaluation
+
+
 
 # License
 
