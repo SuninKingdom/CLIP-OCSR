@@ -1,60 +1,50 @@
 # CLIP-OCSR: Bridging the Markush Gap in Optical Chemical Structure Recognition
 
-[![Paper](https://img.shields.io/badge/Paper-Arxiv-red)](#) 
-[![Zenodo](https://img.shields.io/badge/Dataset-Zenodo-blue)](https://zenodo.org/your-link-here)
-[![Zenodo](https://img.shields.io/badge/Weights-Zenodo-blue)](https://zenodo.org/your-link-here)
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.8.18-blue)](https://www.python.org/downloads/release/python-3818/)
+[![Python](https://img.shields.io/badge/Python-3.8.18-blue)](https://www.python.org/downloads/)
+[![RDKit](https://img.shields.io/badge/Dependency-RDKit-green)](https://www.rdkit.org/)
 
 Official implementation of the paper: **"Bridging the Markush gap in optical chemical structure recognition via a CLIP-derived visual backbone and synthetic data generation"**.
 
-CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure Recognition (OCSR), focusing on the high-fidelity translation of complex chemical images into SMILES strings. By combining a **domain-adaptively pretrained** CLIP vision encoder with a Transformer-based decoder, and leveraging our **MarkushGen** synthetic toolkit, it excels at recognizing **Markush structures** that challenge conventional methods.
+CLIP-OCSR is a specialized encoder-decoder model for Optical Chemical Structure Recognition (OCSR). It focuses on the high-fidelity translation of complex chemical images into SMILES strings, with a particular emphasis on **Markush structures** ubiquitous in pharmaceutical patents.
 
-
+> **Note:** This repository currently provides the **Evaluation Suite** used to assess model accuracy on SMILES and Pseudo-SMILES (Markush) predictions. Model weights and training datasets are not included in the current release.
 
 ---
 
-## ✨ Key Features
+## ✨ Model Highlights
 
-* **CLIP-Derived Visual Backbone**: Utilizes a CLIP-RN50 encoder pretrained on chemical image-caption pairs for robust molecular feature extraction.
-* **Markush Structure Mastery**: Specifically optimized to handle complex structural variations ubiquitous in pharmaceutical patents:
-    * **Substituent & Frequency Variations**: Achieves significantly higher accuracy than existing SOTA methods.
-    * **Position Variations**: Employing a deterministic post-processing enumeration strategy to exhaustively derive all isomer sets from symbolic predictions.
-* **MarkushGen Powered**: Developed with the MarkushGen toolkit to synthesize diverse training data, overcoming the scarcity of annotated Markush images.
-* **ONNX Inference**: High-performance inference scripts provided for both CPU and NVIDIA GPU (via CUDA).
+* **CLIP-Derived Visual Backbone**: Utilizes a CLIP-RN50 encoder pretrained on chemical image-caption pairs for robust feature extraction.
+* **Markush Structure Mastery**: Specifically optimized to handle complex structural variations (substituent, frequency, and position variations).
+* **Deterministic Post-processing**: Employs an enumeration strategy to derive specific isomer sets from symbolic Pseudo-SMILES predictions.
+* **MarkushGen Powered**: Developed using the MarkushGen toolkit to overcome the scarcity of annotated Markush images.
+
+---
+
+## 📊 Evaluation Suite
+
+This toolkit provides the core logic for benchmarking OCSR models, especially those capable of generating Markush notations.
+
+### Key Capabilities:
+* **Pseudo-SMILES Validation**: Logic to verify if a predicted Markush string is chemically consistent with the ground truth.
+* **Canonicalization**: Leveraging RDKit for robust molecular identity comparison.
+* **Accuracy Metrics**: Scripts to calculate Top-1 accuracy and other performance indicators across diverse datasets.
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Prerequisites
+### 1. Installation
 
-* **Python**: 3.8.18 (Recommended)
-* **GPU Acceleration (Optional)**: To enable GPU inference, strict version alignment between **ONNX Runtime**, **CUDA**, and **cuDNN** is essential.
-* **Verified Environment**: The following configuration has been successfully tested on our servers:
-    * **ONNX Runtime**: `onnxruntime-gpu==1.19.2`
-    * **CUDA**: 12.2
-    * **cuDNN**: 9.6.0
-* **Reference**: For other version combinations, please refer to the [Official Compatibility Matrix](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html).
+Ensure you have [RDKit](https://www.rdkit.org/docs/Install.html) installed. We recommend using a Conda environment:
 
-### 2. Installation
 ```bash
 # Clone the repository
-git clone [https://github.com/YourUsername/CLIP-OCSR.git](https://github.com/YourUsername/CLIP-OCSR.git)
+git clone [https://github.com/Sunin/CLIP-OCSR.git](https://github.com/Sunin/CLIP-OCSR.git)
 cd CLIP-OCSR
 
-# Create and activate the environment
-conda create -n clip-ocsr python=3.8.18
-conda activate clip-ocsr
-
 # Install dependencies
-pip install -r requirements.txt
-```
-### 3. Download Weights
-
-Download the model weight file from [Zenodo](https://zenodo.org/) and place it in the `weights` directory:
-
-- `CLIP-OCSR.onnx`
+pip install rdkit pandas numpy`CLIP-OCSR.onnx`
 
 # Usage
 
