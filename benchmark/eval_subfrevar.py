@@ -63,7 +63,7 @@ def compare_subfrevar(s1, s2, exclude_items):
                 return 0
 
 
-'''
+
 if __name__ == "__main__":
     s1 = "[Rp][N+](C)(C)[C@@H](CCOC1=C2C=CC=CC2=CC=C1)C1=CC=CC=C1"
 
@@ -72,4 +72,3 @@ if __name__ == "__main__":
     exclude_items = ['C@H', 'C@', 'C@@H', 'C@@', 'N+']
 
     print(compare_subfrevar(s1, s2, exclude_items))
-'''
