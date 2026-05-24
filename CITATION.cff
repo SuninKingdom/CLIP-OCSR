@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+title: "Bridging the Markush Gap in Optical Chemical Structure Recognition via a CLIP-Derived Visual Backbone and Synthetic Data Generation"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - family-names: "Huang"
+    given-names: "Qixing"
+    affiliation: "Innovation Center for AI and Drug Discovery, School of Pharmacy, East China Normal University"
+repository-code: "https://github.com/SuninKingdom/CLIP-OCSR"
+abstract: "CLIP-OCSR is a two-stage framework for optical chemical structure recognition that leverages CLIP-based visual encoders and Transformer decoders to convert molecular structure images into SMILES strings."
+license: "MIT"
+preferred-citation:
+  type: article
+  title: "Bridging the Markush Gap in Optical Chemical Structure Recognition via a CLIP-Derived Visual Backbone and Synthetic Data Generation"
+  authors:
+    - family-names: "Huang"
+      given-names: "Qixing"
+    - family-names: "Chang"
+      given-names: "Haohua"
+    - family-names: "Mao"
+      given-names: "Liyun"
+    - family-names: "Shen"
+      given-names: "Zihao"
+    - family-names: "Tian"
+      given-names: "Wenhao"
+    - family-names: "Zheng"
+      given-names: "Meijuan"
+    - family-names: "Wang"
+      given-names: "Jun"
+    - family-names: "Li"
+      given-names: "Honglin"
+  journal: "Journal of Chemical Information and Modeling"
+  year: 2026
+  doi: "<DOI>"

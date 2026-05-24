@@ -1,0 +1,32 @@
+# Stage 1: CLIP Domain-Adaptive Pretraining Configuration
+# Paper: CLIP-OCSR for Optical Chemical Structure Recognition
+#
+# Usage:
+#   torchrun --nproc_per_node=1 -m clip_ocsr.stage1.train --config configs/stage1_pretrain.yaml
+
+# Data paths (relative to project root)
+csv_path: "sample_data/stage1/train.csv"
+data_dir: "sample_data/stage1"
+checkpoint_dir: "checkpoints/stage1"
+tensorboard_dir: "runs/stage1"
+
+# Model
+model_name: "RN50"
+# Path to OpenAI CLIP RN50 pretrained weights (.pt file)
+# Download from: https://openaipublic.azureedge.net/clip/models/afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762/RN50.pt
+# Or use: python -c "import clip; clip.load('RN50', device='cpu')"
+pretrained_path: ""  # <-- User must fill in this path
+
+# Training hyperparameters (matching the paper)
+num_epochs: 60
+batch_size: 256
+learning_rate: 2.0e-6
+weight_decay: 1.0e-4
+scheduler_T_max: 60
+train_split_ratio: 0.995
+num_workers: 4
+save_every_epoch: 1
+seed: 42
+
+# Checkpoint naming
+model_basename: "stage1_clip_rn50"

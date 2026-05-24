@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# PyTorch
+*.pt
+*.pth
+weights/
+checkpoints/
+
+# TensorBoard
+runs/
+
+# Sample data images (too large for git)
+sample_data/stage1/images/
+sample_data/stage2/images/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/

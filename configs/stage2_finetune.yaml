@@ -1,0 +1,37 @@
+# Stage 2: CLIP-OCSR Fine-tuning Configuration
+# Paper: CLIP-OCSR for Optical Chemical Structure Recognition
+#
+# Usage:
+#   torchrun --nproc_per_node=2 -m clip_ocsr.stage2.train --config configs/stage2_finetune.yaml
+
+# Data paths (relative to project root)
+dataframe_path: "sample_data/stage2/train.csv"
+img_folder: "sample_data/stage2"
+tokenizer_path: "assets/tokenizer_smiles.json"
+abbrev_group_path: "assets/abbrev_group.json"
+
+# Checkpoint
+preload: 0  # Epoch to resume from, 0 = start from scratch
+model_folder: "checkpoints/stage2"
+model_basename: "stage2_clip_ocsr_"
+tb_folder: "runs/stage2"
+
+# Training hyperparameters (matching the paper)
+training_ratio: 0.9992
+num_epochs: 60
+batch_size: 112  # Per GPU
+lr: 1.5e-4
+
+# CLIP encoder from Stage 1
+# Path to the Stage 1 checkpoint (.pt file)
+clip_ckpt_path: ""  # <-- User must fill in this path
+trainable: true
+
+# Transformer decoder configuration (matching the paper)
+seq_len: 256
+tgt_seq_len: 256
+d_model: 512
+N: 6          # Number of decoder layers
+h: 8          # Number of attention heads
+dropout: 0.1
+d_ff: 2048    # Feed-forward dimension
