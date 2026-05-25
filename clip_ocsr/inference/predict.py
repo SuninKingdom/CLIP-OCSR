@@ -1,13 +1,8 @@
 """Inference module for CLIP-OCSR: Predict SMILES from molecular structure images.
 
 Usage:
-    # Using only Stage 2 checkpoint (recommended):
     python -m clip_ocsr.inference.predict --image path/to/image.png \
         --weights path/to/stage2_model.pt
-
-    # Using both Stage 1 and Stage 2 checkpoints:
-    python -m clip_ocsr.inference.predict --image path/to/image.png \
-        --weights path/to/stage2_model.pt --clip_ckpt path/to/stage1_clip.pt
 """
 
 import argparse
@@ -30,16 +25,15 @@ from clip_ocsr.stage2.dataset import causal_mask
 from clip_ocsr.utils.abbrev_group import abbrevgroup2smiles
 
 
-def load_model(weights_path, clip_ckpt_path=None, tokenizer_path="assets/tokenizer_smiles.json",
+def load_model(weights_path, tokenizer_path="assets/tokenizer_smiles.json",
                tgt_seq_len=256, d_model=512, N=6, h=8, dropout=0.1, d_ff=2048):
-    """Load a trained SmilesModel from checkpoint.
+    """Load a trained SmilesModel from Stage 2 checkpoint.
+
+    The Stage 2 checkpoint contains all model weights including the
+    fine-tuned visual encoder, so no Stage 1 checkpoint is needed.
 
     Args:
         weights_path: Path to the Stage 2 model checkpoint.
-        clip_ckpt_path: Optional path to the Stage 1 CLIP checkpoint.
-            If not provided, the model will be built with random initialization
-            and then the Stage 2 weights will be loaded (which include the
-            fine-tuned visual encoder).
         tokenizer_path: Path to the SMILES tokenizer JSON file.
         tgt_seq_len: Target sequence length.
         d_model: Model dimension.
@@ -53,34 +47,25 @@ def load_model(weights_path, clip_ckpt_path=None, tokenizer_path="assets/tokeniz
     """
     tokenizer_tgt = Tokenizer.from_file(tokenizer_path)
 
-    if clip_ckpt_path:
-        # Build model with Stage 1 CLIP checkpoint
-        model = build_smilesmodel(
-            clip_ckpt_path, False, tokenizer_tgt.get_vocab_size(),
-            tgt_seq_len, d_model, N, h, dropout, d_ff
-        )
-    else:
-        # Build model without Stage 1 checkpoint (will be overwritten by Stage 2 weights)
-        # Use a temporary random initialization
-        from clip_ocsr.models.resnet_extractor import ResNetEncoder
-        from torchvision.models import resnet50
-        resnet = resnet50(pretrained=False)
-        resnet_clip = ResNetEncoder(resnet)
-        img_encoder = OcsrEncoder(resnet_clip, False)
+    # Build model with random initialization (will be overwritten by Stage 2 weights)
+    from torchvision.models import resnet50
+    resnet = resnet50(pretrained=False)
+    resnet_clip = ResNetEncoder(resnet)
+    img_encoder = OcsrEncoder(resnet_clip, False)
 
-        tgt_embed = InputEmbeddings(d_model, tokenizer_tgt.get_vocab_size())
-        tgt_pos = PositionalEncoding(d_model, tgt_seq_len, dropout)
-        decoder_blocks = []
-        for _ in range(N):
-            decoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
-            decoder_cross_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
-            feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout)
-            decoder_block = DecoderBlock(d_model, decoder_self_attention_block,
-                                         decoder_cross_attention_block, feed_forward_block, dropout)
-            decoder_blocks.append(decoder_block)
-        decoder = Decoder(d_model, nn.ModuleList(decoder_blocks))
-        projection_layer = ProjectionLayer(d_model, tokenizer_tgt.get_vocab_size())
-        model = SmilesModel(img_encoder, decoder, tgt_embed, tgt_pos, projection_layer)
+    tgt_embed = InputEmbeddings(d_model, tokenizer_tgt.get_vocab_size())
+    tgt_pos = PositionalEncoding(d_model, tgt_seq_len, dropout)
+    decoder_blocks = []
+    for _ in range(N):
+        decoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
+        decoder_cross_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
+        feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout)
+        decoder_block = DecoderBlock(d_model, decoder_self_attention_block,
+                                     decoder_cross_attention_block, feed_forward_block, dropout)
+        decoder_blocks.append(decoder_block)
+    decoder = Decoder(d_model, nn.ModuleList(decoder_blocks))
+    projection_layer = ProjectionLayer(d_model, tokenizer_tgt.get_vocab_size())
+    model = SmilesModel(img_encoder, decoder, tgt_embed, tgt_pos, projection_layer)
 
     state = torch.load(weights_path, map_location='cpu')
     model.load_state_dict(state['model_state_dict'])
@@ -208,7 +193,7 @@ def main():
     parser = argparse.ArgumentParser(description="CLIP-OCSR Inference: Predict SMILES from molecular images")
     parser.add_argument("--image", type=str, required=True, help="Path to input image")
     parser.add_argument("--weights", type=str, required=True, help="Path to Stage 2 model checkpoint (.pt)")
-    parser.add_argument("--clip_ckpt", type=str, default=None, help="Optional: Path to Stage 1 CLIP checkpoint (.pt)")
+    # Removed --clip_ckpt: Stage 2 checkpoint contains all weights
     parser.add_argument("--tokenizer", type=str, default="assets/tokenizer_smiles.json",
                         help="Path to SMILES tokenizer JSON")
     parser.add_argument("--abbrev_group", type=str, default="assets/abbrev_group.json",
@@ -220,7 +205,7 @@ def main():
     print(f"Using device: {device}")
 
     print("Loading model...")
-    model, tokenizer = load_model(args.weights, args.clip_ckpt, args.tokenizer)
+    model, tokenizer = load_model(args.weights, args.tokenizer)
     model.to(device)
 
     print(f"Predicting SMILES for: {args.image}")
