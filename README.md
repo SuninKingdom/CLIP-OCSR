@@ -101,7 +101,8 @@ torchrun --nproc_per_node=2 -m clip_ocsr.stage2.train --config configs/stage2_fi
 ```bash
 python -m clip_ocsr.inference.predict \
     --image path/to/molecule.png \
-    --weights checkpoints/stage2/stage2_clip_ocsr_45.pt
+    --weights checkpoints/stage2/stage2_clip_ocsr_45.pt \
+    --clip_ckpt checkpoints/stage1/stage1_clip_rn50_epoch_13.pt
 ```
 
 ## Project Structure

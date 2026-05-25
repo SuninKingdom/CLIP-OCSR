@@ -2,38 +2,28 @@
 
 Usage:
     python -m clip_ocsr.inference.predict --image path/to/image.png \
-        --weights path/to/stage2_model.pt
+        --weights path/to/stage2_model.pt --clip_ckpt path/to/stage1_clip.pt
 """
 
 import argparse
 import torch
-import torch.nn as nn
 import numpy as np
 from PIL import Image
 from torchvision import transforms
-from torchvision.models import resnet50
 from tokenizers import Tokenizer
 
-from clip_ocsr.stage2.model import SmilesModel, build_smilesmodel
-from clip_ocsr.stage2.encoder import OcsrEncoder
-from clip_ocsr.models.resnet_extractor import ResNetEncoder
-from clip_ocsr.models.transformer import (
-    InputEmbeddings, PositionalEncoding, MultiHeadAttentionBlock,
-    FeedForwardBlock, DecoderBlock, Decoder, ProjectionLayer
-)
+from clip_ocsr.stage2.model import build_smilesmodel
 from clip_ocsr.stage2.dataset import causal_mask
 from clip_ocsr.utils.abbrev_group import abbrevgroup2smiles
 
 
-def load_model(weights_path, tokenizer_path="assets/tokenizer_smiles.json",
+def load_model(weights_path, clip_ckpt_path, tokenizer_path="assets/tokenizer_smiles.json",
                tgt_seq_len=256, d_model=512, N=6, h=8, dropout=0.1, d_ff=2048):
-    """Load a trained SmilesModel from Stage 2 checkpoint.
-
-    The Stage 2 checkpoint contains all model weights including the
-    fine-tuned visual encoder, so no Stage 1 checkpoint is needed.
+    """Load a trained SmilesModel from checkpoint.
 
     Args:
         weights_path: Path to the Stage 2 model checkpoint.
+        clip_ckpt_path: Path to the Stage 1 CLIP checkpoint.
         tokenizer_path: Path to the SMILES tokenizer JSON file.
         tgt_seq_len: Target sequence length.
         d_model: Model dimension.
@@ -46,27 +36,10 @@ def load_model(weights_path, tokenizer_path="assets/tokenizer_smiles.json",
         Tuple of (model, tokenizer).
     """
     tokenizer_tgt = Tokenizer.from_file(tokenizer_path)
-
-    # Build model with random initialization (will be overwritten by Stage 2 weights)
-    from torchvision.models import resnet50
-    resnet = resnet50(pretrained=False)
-    resnet_clip = ResNetEncoder(resnet)
-    img_encoder = OcsrEncoder(resnet_clip, False)
-
-    tgt_embed = InputEmbeddings(d_model, tokenizer_tgt.get_vocab_size())
-    tgt_pos = PositionalEncoding(d_model, tgt_seq_len, dropout)
-    decoder_blocks = []
-    for _ in range(N):
-        decoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
-        decoder_cross_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
-        feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout)
-        decoder_block = DecoderBlock(d_model, decoder_self_attention_block,
-                                     decoder_cross_attention_block, feed_forward_block, dropout)
-        decoder_blocks.append(decoder_block)
-    decoder = Decoder(d_model, nn.ModuleList(decoder_blocks))
-    projection_layer = ProjectionLayer(d_model, tokenizer_tgt.get_vocab_size())
-    model = SmilesModel(img_encoder, decoder, tgt_embed, tgt_pos, projection_layer)
-
+    model = build_smilesmodel(
+        clip_ckpt_path, False, tokenizer_tgt.get_vocab_size(),
+        tgt_seq_len, d_model, N, h, dropout, d_ff
+    )
     state = torch.load(weights_path, map_location='cpu')
     model.load_state_dict(state['model_state_dict'])
     return model, tokenizer_tgt
@@ -193,7 +166,7 @@ def main():
     parser = argparse.ArgumentParser(description="CLIP-OCSR Inference: Predict SMILES from molecular images")
     parser.add_argument("--image", type=str, required=True, help="Path to input image")
     parser.add_argument("--weights", type=str, required=True, help="Path to Stage 2 model checkpoint (.pt)")
-    # Removed --clip_ckpt: Stage 2 checkpoint contains all weights
+    parser.add_argument("--clip_ckpt", type=str, required=True, help="Path to Stage 1 CLIP checkpoint (.pt)")
     parser.add_argument("--tokenizer", type=str, default="assets/tokenizer_smiles.json",
                         help="Path to SMILES tokenizer JSON")
     parser.add_argument("--abbrev_group", type=str, default="assets/abbrev_group.json",
@@ -205,7 +178,7 @@ def main():
     print(f"Using device: {device}")
 
     print("Loading model...")
-    model, tokenizer = load_model(args.weights, args.tokenizer)
+    model, tokenizer = load_model(args.weights, args.clip_ckpt, args.tokenizer)
     model.to(device)
 
     print(f"Predicting SMILES for: {args.image}")
