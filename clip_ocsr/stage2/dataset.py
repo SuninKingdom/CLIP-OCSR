@@ -44,8 +44,8 @@ class SmilesDataset(Dataset):
     def __getitem__(self, idx):
         row = self.dataframe.iloc[idx]
 
-        img_path = self.img_folder + '/' + row[0]
-        smiles = row[1]
+        img_path = self.img_folder + '/' + row.iloc[0]
+        smiles = row.iloc[1]
 
         image = Image.open(img_path).convert("RGB")
         image = self.transform(image)
