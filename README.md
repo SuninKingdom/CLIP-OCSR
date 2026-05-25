@@ -31,7 +31,7 @@ We provide a ready-to-use web interface hosted on Hugging Face Spaces. You can u
 ```bash
 # Clone the repository
 git clone https://github.com/SuninKingdom/CLIP-OCSR.git
-cd clip_ocsr
+cd CLIP-OCSR
 
 # Create conda environment
 conda create -n clip_ocsr python=3.10
@@ -108,7 +108,7 @@ python -m clip_ocsr.inference.predict \
 ## Project Structure
 
 ```
-clip_ocsr/
+CLIP-OCSR/
 ├── clip_ocsr/                  # Main Python package
 │   ├── stage1/                 # Stage 1: CLIP pretraining
 │   │   ├── train.py            # Training script
