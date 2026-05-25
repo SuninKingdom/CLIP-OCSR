@@ -99,6 +99,12 @@ torchrun --nproc_per_node=2 -m clip_ocsr.stage2.train --config configs/stage2_fi
 ### 4. Inference
 
 ```bash
+# Using only Stage 2 checkpoint (recommended):
+python -m clip_ocsr.inference.predict \
+    --image path/to/molecule.png \
+    --weights checkpoints/stage2/stage2_clip_ocsr_45.pt
+
+# Alternatively, with explicit Stage 1 checkpoint:
 python -m clip_ocsr.inference.predict \
     --image path/to/molecule.png \
     --weights checkpoints/stage2/stage2_clip_ocsr_45.pt \
