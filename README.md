@@ -132,7 +132,7 @@ clip_ocsr/
 │       ├── seed.py             # Reproducibility
 │       └── abbrev_group.py     # Abbreviated group expansion
 ├── configs/                    # YAML configuration files
-├── assets/                     # Tokenizer and abbreviation data
+├── assets/                     # Tokenizer, abbreviation data, and sample SMILES for Stage 1/2
 ├── scripts/                    # Helper scripts
 ├── sample_data/                # Sample training data
 └── tests/                      # Unit tests
