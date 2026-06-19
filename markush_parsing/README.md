@@ -17,17 +17,10 @@ The two outputs are combined to form a structured Markush representation that pr
 
 ## Installation
 
-All commands below should be run from the **repository root** (`CLIP-OCSR/`).
+Install CLIP-OCSR first (see main [README](../README.md#installation)), then install additional dependencies for Markush parsing:
 
 ```bash
-# Install CLIP-OCSR and its dependencies
-pip install -e .
-
-# Install additional dependencies for Markush parsing
 pip install openai python-dotenv mineru-open-sdk
-
-# Install PyTorch separately (see main README)
-# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 ```
 
 ## Configuration
@@ -59,7 +52,6 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 The file `Complete_Markush_Representation.csv` contains source metadata for the 27 Markush descriptions (21 patent-derived, 6 journal-derived) used to evaluate the multimodal parsing workflow in the paper.
 
 ## Usage
-
 
 ### Run on a single image
 
