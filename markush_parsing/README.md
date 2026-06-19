@@ -56,8 +56,12 @@ The file `Complete_Markush_Representation.csv` contains source metadata for the 
 ### Run on a single image
 
 ```bash
-python markush_parsing/run.py --input image.png --output results/ --llm deepseek
+python markush_parsing/run.py --input assets/markush_representation_example.png --output results/ --llm deepseek
 ```
+
+Example input ([`assets/markush_representation_example.png`](../assets/markush_representation_example.png)):
+
+<img src="../assets/markush_representation_example.png" width="400">
 
 ### Run on a folder of images with evaluation labels
 
