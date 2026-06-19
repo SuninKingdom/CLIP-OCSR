@@ -6,9 +6,9 @@ This directory contains source-level metadata for the three Markush benchmark te
 
 | Test Set | Description | Patent Source | Journal Source |
 |----------|-------------|---------------|----------------|
-| Markush-SubVar202 | Substituent variation | `MarkushWithSubstituentVariation_Patent.xlsx` | `MarkushWithSubstituentVariation_Journal.xlsx` |
-| Markush-FreVar202 | Frequency variation | `MarkushWithFrequencyVariation_Patent.xlsx` | `MarkushWithFrequencyVariation_Journal.xlsx` |
-| Markush-PosVar202 | Position variation | `MarkushWithPositionVariation_Patent.xlsx` | `MarkushWithPositionVariation_Journal.xlsx` |
+| Markush-SubVar202 | Substituent variation | `MarkushWithSubstituentVariation_Patent.csv` | `MarkushWithSubstituentVariation_Journal.csv` |
+| Markush-FreVar202 | Frequency variation | `MarkushWithFrequencyVariation_Patent.csv` | `MarkushWithFrequencyVariation_Journal.csv` |
+| Markush-PosVar202 | Position variation | `MarkushWithPositionVariation_Patent.csv` | `MarkushWithPositionVariation_Journal.csv` |
 
 ## Column Definitions
 
