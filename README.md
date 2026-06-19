@@ -77,11 +77,7 @@ This creates ~300 sample molecular images in `sample_data/` for testing the pipe
 ### 2. Stage 1: CLIP Domain-Adaptive Pretraining
 
 ```bash
-# Single GPU
 torchrun --nproc_per_node=1 -m clip_ocsr.stage1.train --config configs/stage1_pretrain.yaml
-
-# Multi-GPU (e.g., 2 GPUs)
-torchrun --nproc_per_node=2 -m clip_ocsr.stage1.train --config configs/stage1_pretrain.yaml
 ```
 
 ### 3. Stage 2: OCSR Fine-tuning
