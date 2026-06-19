@@ -20,3 +20,8 @@ tensorboard>=2.10.0
 
 # CLIP (install separately)
 # pip install git+https://github.com/openai/CLIP.git
+
+# Markush parsing (optional, for multimodal Markush workflow)
+# openai>=1.0.0
+# python-dotenv>=1.0.0
+# mineru-open-sdk>=0.2.0

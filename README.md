@@ -22,7 +22,7 @@ We provide a ready-to-use web interface hosted on Hugging Face Spaces. You can u
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - CUDA-capable GPU (recommended)
 - conda or pip
 
@@ -31,7 +31,7 @@ We provide a ready-to-use web interface hosted on Hugging Face Spaces. You can u
 ```bash
 # Clone the repository
 git clone https://github.com/SuninKingdom/CLIP-OCSR.git
-cd clip_ocsr
+cd CLIP-OCSR
 
 # Create conda environment
 conda create -n clip_ocsr python=3.10
@@ -105,10 +105,16 @@ python -m clip_ocsr.inference.predict \
     --clip_ckpt checkpoints/stage1/stage1_clip_rn50_epoch_13.pt
 ```
 
+## Multimodal Markush Structure Parsing
+
+In addition to backbone recognition, this repository includes a complete multimodal Markush information extraction workflow. Starting from a Markush description in a document, MinerU performs layout analysis and OCR to separate the graphical scaffold from the accompanying textual definitions. The cropped backbone image is processed by CLIP-OCSR to generate a backbone pseudo-SMILES representation, whereas the OCR-derived text is parsed by an LLM to extract structured variable definitions. The two outputs are then combined to form a structured Markush representation.
+
+See [`markush_parsing/README.md`](markush_parsing/README.md) for detailed usage instructions.
+
 ## Project Structure
 
 ```
-clip_ocsr/
+CLIP-OCSR/
 ├── clip_ocsr/                  # Main Python package
 │   ├── stage1/                 # Stage 1: CLIP pretraining
 │   │   ├── train.py            # Training script
@@ -131,6 +137,15 @@ clip_ocsr/
 │   └── utils/                  # Utilities
 │       ├── seed.py             # Reproducibility
 │       └── abbrev_group.py     # Abbreviated group expansion
+├── markush_parsing/            # Multimodal Markush parsing workflow
+│   ├── run.py                  # CLI entry point
+│   ├── pipeline.py             # Pipeline orchestration
+│   ├── image_crop.py           # MinerU layout analysis
+│   ├── ocsr_client.py          # CLIP-OCSR inference wrapper
+│   ├── llm_client.py           # LLM substituent extraction
+│   ├── evaluate.py             # Evaluation metrics
+│   └── stable_parser.py        # Variable parsing and scoring
+├── benchmark/                  # Markush benchmark source metadata
 ├── configs/                    # YAML configuration files
 ├── assets/                     # Tokenizer, abbreviation data, and sample SMILES for Stage 1/2
 ├── scripts/                    # Helper scripts

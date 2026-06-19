@@ -39,3 +39,6 @@ env/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Markush parsing output
+markush_parsing/results/
