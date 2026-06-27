@@ -107,7 +107,7 @@ Example input ([`assets/chemical_structure_example.png`](assets/chemical_structu
 
 ## Multimodal Markush Structure Parsing
 
-In addition to backbone recognition, this repository includes a complete multimodal Markush information extraction workflow. Starting from a Markush description in a document, MinerU performs layout analysis and OCR to separate the graphical scaffold from the accompanying textual definitions. The cropped backbone image is processed by CLIP-OCSR to generate a backbone pseudo-SMILES representation, whereas the OCR-derived text is parsed by an LLM to extract structured variable definitions. The two outputs are then combined to form a structured Markush representation.
+In addition to backbone recognition, this repository includes a complete multimodal Markush information extraction workflow. Starting from a Markush description in a document, [MinerU](https://github.com/opendatalab/MinerU) (deployed locally) performs layout analysis and OCR to separate the graphical scaffold from the accompanying textual definitions. The cropped backbone image is processed by CLIP-OCSR to generate a backbone pseudo-SMILES representation, whereas the OCR-derived text is parsed by an LLM to extract structured variable definitions. The two outputs are then combined to form a structured Markush representation.
 
 See [`markush_parsing/README.md`](markush_parsing/README.md) for detailed usage instructions.
 

@@ -31,8 +31,8 @@ class Config:
     mimo_base_url: str = ""
     mimo_model: str = ""
 
-    # MinerU API
-    mineru_token: str = ""
+    # Local MinerU output directory (pre-computed)
+    mineru_output_dir: str = ""
 
     # Cropping thresholds
     text_y_threshold: float = 0.45
@@ -58,7 +58,7 @@ class Config:
         self.mimo_api_key = self.mimo_api_key or os.getenv("MIMO_API_KEY", "")
         self.mimo_base_url = self.mimo_base_url or os.getenv("MIMO_BASE_URL", "")
         self.mimo_model = self.mimo_model or os.getenv("MIMO_MODEL", "mimo-v2.5")
-        self.mineru_token = self.mineru_token or os.getenv("MINERU_TOKEN", "")
+        self.mineru_output_dir = self.mineru_output_dir or os.getenv("MINERU_OUTPUT_DIR", "")
 
         # Separate output dir per LLM provider
         self.output_dir = os.path.join(self.output_dir, self.llm_provider)

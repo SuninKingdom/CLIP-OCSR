@@ -10,9 +10,9 @@ The two outputs are combined to form a structured Markush representation that pr
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.12
 - CLIP-OCSR Stage 1 and Stage 2 checkpoints (see main [README](../README.md) for download instructions)
-- A [MinerU](https://github.com/opendatalab/MinerU) account and API token
+- [MinerU](https://github.com/opendatalab/MinerU) installed locally (see below)
 - An OpenAI-compatible LLM API key (e.g., DeepSeek, MiMo)
 
 ## Installation
@@ -20,8 +20,43 @@ The two outputs are combined to form a structured Markush representation that pr
 Install CLIP-OCSR first (see main [README](../README.md#installation)), then install additional dependencies for Markush parsing:
 
 ```bash
-pip install openai python-dotenv mineru-open-sdk
+pip install openai python-dotenv
 ```
+
+### Local MinerU Setup
+
+MinerU is used for document layout analysis. Install it in a separate conda environment:
+
+```bash
+conda create -n mineru-3.4-pipeline python=3.12 -y
+conda activate mineru-3.4-pipeline
+pip install "mineru[pipeline]==3.4.0"
+```
+
+Verify the installation:
+
+```bash
+mineru --version
+```
+
+For more details, see the [MinerU GitHub repository](https://github.com/opendatalab/MinerU).
+
+### Download MinerU Models
+
+After installation, download the pipeline models:
+
+```bash
+export MINERU_MODEL_SOURCE=modelscope   # Use ModelScope for servers in China
+mineru-models-download
+```
+
+In the interactive menu, select only **pipeline** related models. After download:
+
+```bash
+export MINERU_MODEL_SOURCE=local
+```
+
+**Note**: `export MINERU_MODEL_SOURCE=local` must be re-run every time you log in. Consider adding it to your shell profile or conda activation script.
 
 ## Configuration
 
@@ -38,8 +73,8 @@ Edit `.env` with your settings:
 STAGE1_CKPT_PATH=/path/to/stage1_clip_checkpoint.pt
 STAGE2_CKPT_PATH=/path/to/stage2_ocsr_checkpoint.pt
 
-# MinerU
-MINERU_TOKEN=your_mineru_jwt_token_here
+# Local MinerU output directory
+MINERU_OUTPUT_DIR=/path/to/mineru_outputs
 
 # LLM API (choose one)
 DEEPSEEK_API_KEY=your_api_key_here
@@ -51,12 +86,31 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 
 The file `Complete_Markush_Representation.csv` contains source metadata for the 27 Markush descriptions (21 patent-derived, 6 journal-derived) used to evaluate the multimodal parsing workflow in the paper.
 
+## MinerU Pre-computation
+
+Before running the pipeline, you must pre-compute MinerU layout outputs. This is a one-time step per dataset:
+
+```bash
+conda activate mineru-3.4-pipeline
+mineru -p /path/to/images -o /path/to/mineru_outputs -b pipeline
+```
+
+This creates a directory structure like:
+```
+mineru_outputs/
+  markush_representation_01/
+    auto/
+      markush_representation_01_content_list.json
+      images/
+        ...
+```
+
 ## Usage
 
 ### Run on a single image
 
 ```bash
-python markush_parsing/run.py --input assets/markush_representation_example.png --output results/ --llm deepseek
+python markush_parsing/run.py --input assets/markush_representation_example.png --mineru-dir /path/to/mineru_outputs --output results/ --llm deepseek
 ```
 
 Example input ([`assets/markush_representation_example.png`](../assets/markush_representation_example.png)):
@@ -69,6 +123,7 @@ Example input ([`assets/markush_representation_example.png`](../assets/markush_r
 python markush_parsing/run.py \
     --input /path/to/images \
     --labels labels.json \
+    --mineru-dir /path/to/mineru_outputs \
     --output results/ \
     --llm deepseek
 ```
@@ -82,7 +137,7 @@ python markush_parsing/run.py --evaluate results/deepseek/per_sample.jsonl
 ### Test MinerU layout analysis only
 
 ```bash
-python markush_parsing/run.py --input image.png --crop --output results/
+python markush_parsing/run.py --input image.png --mineru-dir /path/to/mineru_outputs --crop --output results/
 ```
 
 ## Evaluation Metrics

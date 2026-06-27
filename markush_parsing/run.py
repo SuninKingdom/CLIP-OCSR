@@ -4,18 +4,21 @@
 Combines MinerU layout analysis, CLIP-OCSR recognition, and LLM-based
 substituent extraction for complete Markush structure parsing.
 
+Requires pre-computed MinerU layout outputs. Run MinerU first:
+    mineru -p /path/to/images -o /path/to/mineru_outputs -b pipeline
+
 Usage:
     # Run on a single image (prediction only)
-    python run.py --input image.png --output results/deepseek --llm deepseek
+    python run.py --input image.png --mineru-dir /path/to/mineru_outputs --llm deepseek
 
     # Run on a folder of images with labels for evaluation
-    python run.py --input /path/to/images --labels labels.json --output results/deepseek --llm deepseek
+    python run.py --input /path/to/images --labels labels.json --mineru-dir /path/to/mineru_outputs --llm deepseek
 
     # Evaluate saved results
     python run.py --evaluate results/deepseek/per_sample.jsonl
 
     # Test cropping on a single image
-    python run.py --input image.png --crop
+    python run.py --input image.png --mineru-dir /path/to/mineru_outputs --crop
 """
 
 import argparse
@@ -82,7 +85,7 @@ def build_samples(image_paths: str, labels_path: str | None) -> list[SampleData]
 
 def cmd_run(args):
     """Run pipeline on input images."""
-    config = Config(llm_provider=args.llm)
+    config = Config(llm_provider=args.llm, mineru_output_dir=args.mineru_dir)
     if args.output:
         config.output_dir = args.output
 
@@ -150,7 +153,7 @@ def cmd_evaluate(args):
 
 def cmd_crop(args):
     """Test MinerU layout analysis and cropping on a single image."""
-    config = Config(llm_provider=args.llm)
+    config = Config(llm_provider=args.llm, mineru_output_dir=args.mineru_dir)
     if args.output:
         config.output_dir = args.output
 
@@ -176,6 +179,7 @@ def main():
     parser.add_argument("--input", "-i", type=str, help="Input image or folder of images")
     parser.add_argument("--output", "-o", type=str, help="Output directory")
     parser.add_argument("--labels", "-l", type=str, help="Labels JSON file (for evaluation)")
+    parser.add_argument("--mineru-dir", type=str, required=True, help="MinerU output directory (pre-computed layout)")
     parser.add_argument("--llm", choices=["deepseek", "mimo"], default="deepseek", help="LLM provider")
     parser.add_argument("--timing", type=str, help="Timing output file path (e.g. timing.txt)")
     parser.add_argument("--no-resume", action="store_true", help="Don't resume from checkpoint")
