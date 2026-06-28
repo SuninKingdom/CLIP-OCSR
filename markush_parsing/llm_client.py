@@ -59,7 +59,7 @@ class SubstituentExtractor:
                     model=self.config.llm_model,
                     messages=messages,
                     temperature=self.config.llm_temperature,
-                    max_tokens=2048,
+                    max_tokens=8192,
                 )
                 text = response.choices[0].message.content
                 result = self._parse_response(text)
