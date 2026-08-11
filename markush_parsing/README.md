@@ -84,7 +84,26 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 
 ## Evaluation Data
 
-The file `Complete_Markush_Representation.csv` contains source metadata for the 27 Markush descriptions (21 patent-derived, 6 journal-derived) used to evaluate the multimodal parsing workflow in the paper.
+The file `Complete_Markush_Representation.csv` contains source metadata for all
+54 Markush images used to evaluate the multimodal parsing workflow in the
+paper. It records provenance rather than ground-truth structures; evaluation
+labels are supplied separately with `--labels`.
+
+The evaluator accepts the original JSON label format and the reviewed M2S CSV
+format. M2S graphical labels may be combined with its variable labels:
+
+```bash
+python markush_parsing/run.py \
+    --input /path/to/m2s/images \
+    --labels /path/to/pseudo_smiles_labels_m2s_reviewed_labels.csv \
+    --variable-labels /path/to/labels.json \
+    --mineru-dir /path/to/mineru_outputs \
+    --output results/ \
+    --llm deepseek
+```
+
+For position-variable structures, the reviewed CSV field
+`final_pseudo_smiles_all` supplies the complete allowed pseudo-SMILES set.
 
 ## MinerU Pre-computation
 
@@ -147,7 +166,17 @@ python markush_parsing/run.py --input image.png --mineru-dir /path/to/mineru_out
 | Markush Graphical Accuracy | Exact match accuracy |
 | Variable Recall | Fraction of ground-truth substituents correctly predicted |
 | Variable Precision | Fraction of predicted substituents that match ground truth |
-| Variable F1 | Harmonic mean of recall and precision |
+| Variable F1 | Harmonic mean of dataset macro Precision and macro Recall (MarkushGrapher-2 definition) |
+
+All dataset samples remain in the primary denominator. Pipeline failures,
+missing predictions, and empty/unscored results receive zero scores. Standalone
+integer ranges such as `1-50` are expanded before variable scoring, matching
+MarkushGrapher-2; chemical expressions such as `C1-C6 alkyl` are left intact.
+
+For clarity, the aggregate output contains only the MarkushGrapher-2 F1. It is
+saved as both `variable_f1` and the explicit alias
+`variable_f1_from_macro_precision_recall`; the former mean-per-sample F1 field
+is no longer reported.
 
 ## Pipeline Architecture
 

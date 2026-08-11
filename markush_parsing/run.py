@@ -28,7 +28,7 @@ import os
 import glob
 
 from config import Config
-from data_loader import SampleData, load_dataset
+from data_loader import SampleData, load_combined_label_entries
 from image_crop import crop_markush_image
 from pipeline import run_pipeline_single, run_pipeline_batch
 from evaluate import evaluate_single, compute_aggregate_metrics, save_results
@@ -59,14 +59,19 @@ def collect_images(input_path: str) -> list[str]:
     return []
 
 
-def build_samples(image_paths: str, labels_path: str | None) -> list[SampleData]:
-    """Build SampleData list. If labels provided, match by image_name."""
+def build_samples(
+    image_paths: list[str],
+    labels_path: str | None,
+    variable_labels_path: str | None = None,
+) -> list[SampleData]:
+    """Build samples and merge graphical/variable labels by image name."""
     # Load labels into a dict keyed by image_name
     labels_map = {}
     if labels_path and os.path.exists(labels_path):
-        with open(labels_path, "r", encoding="utf-8") as f:
-            for entry in json.load(f):
-                labels_map[entry["image_name"]] = entry
+        for entry in load_combined_label_entries(
+            labels_path, variable_labels_path=variable_labels_path
+        ):
+            labels_map[entry["image_name"]] = entry
 
     samples = []
     for i, img_path in enumerate(image_paths):
@@ -78,6 +83,7 @@ def build_samples(image_paths: str, labels_path: str | None) -> list[SampleData]
             image_path=img_path,
             gt_smiles=entry.get("gt_smiles", ""),
             variables_gt=entry.get("variables", {}),
+            pseudo_smiles_all=entry.get("pseudo_smiles_all", []),
         ))
 
     return samples
@@ -94,7 +100,7 @@ def cmd_run(args):
         logger.error("No images found")
         return
 
-    samples = build_samples(image_paths, args.labels)
+    samples = build_samples(image_paths, args.labels, args.variable_labels)
     logger.info(f"Found {len(samples)} images, LLM={args.llm}")
 
     has_labels = any(s.gt_smiles for s in samples)
@@ -133,7 +139,11 @@ def cmd_evaluate(args):
         for line in f:
             try:
                 entry = json.loads(line)
-                if "scores" not in entry and not entry.get("error"):
+                # Always recompute saved scores so legacy result files cannot
+                # silently retain the previous denominator or F1 definition.
+                if entry.get("error"):
+                    entry["scores"] = None
+                elif entry.get("gt_smiles"):
                     entry["scores"] = evaluate_single(entry)
                 results.append(entry)
             except json.JSONDecodeError:
@@ -178,8 +188,13 @@ def main():
 
     parser.add_argument("--input", "-i", type=str, help="Input image or folder of images")
     parser.add_argument("--output", "-o", type=str, help="Output directory")
-    parser.add_argument("--labels", "-l", type=str, help="Labels JSON file (for evaluation)")
-    parser.add_argument("--mineru-dir", type=str, required=True, help="MinerU output directory (pre-computed layout)")
+    parser.add_argument("--labels", "-l", type=str, help="Labels JSON/CSV file (for evaluation)")
+    parser.add_argument(
+        "--variable-labels",
+        type=str,
+        help="Optional supplemental JSON file containing variable labels",
+    )
+    parser.add_argument("--mineru-dir", type=str, help="MinerU output directory (pre-computed layout)")
     parser.add_argument("--llm", choices=["deepseek", "mimo"], default="deepseek", help="LLM provider")
     parser.add_argument("--timing", type=str, help="Timing output file path (e.g. timing.txt)")
     parser.add_argument("--no-resume", action="store_true", help="Don't resume from checkpoint")
@@ -192,8 +207,12 @@ def main():
     if args.evaluate:
         cmd_evaluate(args)
     elif args.crop:
+        if not args.mineru_dir:
+            parser.error("--mineru-dir is required with --crop")
         cmd_crop(args)
     elif args.input:
+        if not args.mineru_dir:
+            parser.error("--mineru-dir is required when running the pipeline")
         cmd_run(args)
     else:
         parser.print_help()

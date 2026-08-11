@@ -32,6 +32,7 @@ def run_pipeline_single(
         "image_name": sample.image_name,
         "gt_smiles": sample.gt_smiles,
         "gt_variables": sample.variables_gt,
+        "gt_pseudo_smiles_all": sample.pseudo_smiles_all,
         "predicted_smiles": None,
         "predicted_variables": None,
         "y_threshold": None,

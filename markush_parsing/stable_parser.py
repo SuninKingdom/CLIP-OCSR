@@ -2,6 +2,36 @@ import math
 import re
 
 
+def expand_integer_ranges(stable: dict | None) -> dict | None:
+    """Expand standalone integer ranges using MarkushGrapher semantics.
+
+    A complete value such as ``"1-3"`` becomes ``["1", "2", "3"]``.
+    Chemical descriptions such as ``"C1-C6 alkyl"`` remain unchanged.
+    """
+    if stable is None:
+        return None
+
+    expanded = {}
+    for label, values in stable.items():
+        expanded_values = []
+        for value in values:
+            match = (
+                re.fullmatch(r"(\d+)-(\d+)", value)
+                if isinstance(value, str)
+                else None
+            )
+            if match is None:
+                expanded_values.append(value)
+                continue
+            start, end = (int(item) for item in match.groups())
+            expanded_values.extend(
+                str(number)
+                for number in range(min(start, end), max(start, end) + 1)
+            )
+        expanded[label] = expanded_values
+    return expanded
+
+
 def parse_stable_string(stable_str: str) -> dict:
     """Parse a stable-format string into a dict.
 
@@ -29,7 +59,7 @@ def parse_stable_string(stable_str: str) -> dict:
             if label:
                 stable[label] = values
 
-    return stable
+    return expand_integer_ranges(stable)
 
 
 def normalize_stable(stable: dict) -> dict:
@@ -58,11 +88,15 @@ def normalize_stable(stable: dict) -> dict:
 def compute_stable_scores(
     gt_stable: dict, pred_stable: dict | None, permissive: bool = True, normalize: bool = True
 ) -> dict:
-    """Compute stable recall, precision, and equality.
+    """Compute stable recall, precision, and per-sample F1.
 
     Replicates the logic from MarkushGrapher's get_stable_score().
     """
-    scores = {"variable_recall": 0.0, "variable_precision": 0.0, "variable_f1": 0.0}
+    scores = {
+        "variable_recall": 0.0,
+        "variable_precision": 0.0,
+        "variable_f1": 0.0,
+    }
 
     if pred_stable is None:
         return scores
@@ -74,8 +108,10 @@ def compute_stable_scores(
             scores["variable_f1"] = 1.0
         return scores
 
-    gt = dict(gt_stable)
-    pred = dict(pred_stable)
+    # MarkushGrapher expands these ranges in its tokenizer before calling
+    # get_stable_score. Direct JSON predictions need the same preprocessing.
+    gt = expand_integer_ranges(dict(gt_stable))
+    pred = expand_integer_ranges(dict(pred_stable))
 
     # Normalize: correct filler words
     if normalize:
@@ -122,7 +158,6 @@ def compute_stable_scores(
             continue
         pred_found.append([ps in gt[label] for ps in pred_subs])
 
-    # Aggregate
     recall_values = [sum(row) / len(row) for row in gt_found if row]
     precision_values = [sum(row) / len(row) for row in pred_found if row]
 
