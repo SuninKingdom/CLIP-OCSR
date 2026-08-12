@@ -11,6 +11,10 @@ from image_crop import crop_markush_image
 from llm_client import SubstituentExtractor
 from ocsr_client import OCSRClient
 from evaluate import evaluate_single
+from markush_instantiator import (
+    MarkushInstantiator,
+    build_markush_instantiator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,7 @@ def run_pipeline_single(
     ocsr: OCSRClient,
     extractor: SubstituentExtractor,
     config: Config,
+    instantiator: MarkushInstantiator | None = None,
 ) -> dict:
     """Run the full pipeline on a single sample.
 
@@ -35,6 +40,7 @@ def run_pipeline_single(
         "gt_pseudo_smiles_all": sample.pseudo_smiles_all,
         "predicted_smiles": None,
         "predicted_variables": None,
+        "instantiation": None,
         "y_threshold": None,
         "time_seconds": None,
         "error": None,
@@ -56,7 +62,30 @@ def run_pipeline_single(
         # Step 3: Substituent extraction — use OCR text (not image)
         result["predicted_variables"] = extractor.extract_substituents(crop.ocr_text)
 
-        # Step 4: Evaluate (only if ground truth available)
+        # Step 4 (optional): combine the pseudo-SMILES and extracted variable
+        # definitions into concrete, RDKit-validated molecular SMILES.
+        if instantiator is not None:
+            try:
+                result["instantiation"] = instantiator.instantiate(
+                    result["predicted_smiles"],
+                    result["predicted_variables"],
+                )
+            except Exception as exc:
+                logger.exception(
+                    "Instantiation failed for %s", sample.image_name
+                )
+                result["instantiation"] = {
+                    "schema_version": MarkushInstantiator.schema_version,
+                    "status": "failed",
+                    "failure_reason": "internal_instantiation_error",
+                    "is_fully_enumerated": False,
+                    "product_count": 0,
+                    "products": [],
+                    "errors": [f"{type(exc).__name__}: {exc}"],
+                    "warnings": [],
+                }
+
+        # Step 5: Evaluate (only if ground truth available)
         if sample.gt_smiles:
             result["scores"] = evaluate_single(result)
 
@@ -119,6 +148,11 @@ def run_pipeline_batch(
     """Run pipeline on all samples with checkpointing."""
     ocsr = OCSRClient(config)
     extractor = SubstituentExtractor(config)
+    instantiator = (
+        build_markush_instantiator(config)
+        if config.enable_instantiation
+        else None
+    )
 
     processed_names = load_checkpoint(config.output_dir) if resume else set()
 
@@ -136,6 +170,17 @@ def run_pipeline_batch(
                     results.append(json.loads(line))
                 except json.JSONDecodeError:
                     continue
+        if config.enable_instantiation:
+            missing_instantiation = sum(
+                result.get("instantiation") is None for result in results
+            )
+            if missing_instantiation:
+                logger.warning(
+                    "%d resumed samples predate concrete-product generation "
+                    "and remain unchanged; use --instantiate-results or start "
+                    "a separate --no-resume run.",
+                    missing_instantiation,
+                )
 
     samples_to_process = [s for s in samples if s.image_name not in processed_names]
 
@@ -148,7 +193,13 @@ def run_pipeline_batch(
     logger.info(f"Processing {len(samples_to_process)} samples...")
 
     for sample in tqdm(samples_to_process, desc="Processing"):
-        result = run_pipeline_single(sample, ocsr, extractor, config)
+        result = run_pipeline_single(
+            sample,
+            ocsr,
+            extractor,
+            config,
+            instantiator=instantiator,
+        )
         results.append(result)
         append_result(result, config.output_dir)
 

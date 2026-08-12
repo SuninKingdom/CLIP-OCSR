@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -42,6 +43,18 @@ class Config:
     llm_max_retries: int = 3
     llm_timeout: int = 60
 
+    # Optional concrete-product generation. It is disabled by default so the
+    # established parsing and evaluation outputs remain unchanged.
+    enable_instantiation: bool = False
+    use_fragment_library: bool = True
+    fragment_library_path: str = ""
+    instantiation_max_products: int = 256
+    instantiation_max_assignment_attempts: int = 10000
+    instantiation_max_position_variants: int = 64
+    instantiation_max_frequency_variants: int = 64
+    instantiation_max_repeat_count: int = 100
+    instantiation_max_candidates_per_value: int = 64
+
     def __post_init__(self):
         self.dataset_dir = self.dataset_dir or os.getenv("MARKUSH_DATASET_DIR", "")
         self.labels_path = self.labels_path or os.getenv("MARKUSH_LABELS_PATH", "")
@@ -59,6 +72,31 @@ class Config:
         self.mimo_base_url = self.mimo_base_url or os.getenv("MIMO_BASE_URL", "")
         self.mimo_model = self.mimo_model or os.getenv("MIMO_MODEL", "mimo-v2.5")
         self.mineru_output_dir = self.mineru_output_dir or os.getenv("MINERU_OUTPUT_DIR", "")
+
+        if self.use_fragment_library:
+            self.fragment_library_path = (
+                self.fragment_library_path
+                or os.getenv("MARKUSH_FRAGMENT_LIBRARY", "")
+                or str(
+                    Path(__file__).resolve().parent
+                    / "resources"
+                    / "markush_fragment_library.json"
+                )
+            )
+        else:
+            self.fragment_library_path = ""
+
+        for field_name in (
+            "instantiation_max_products",
+            "instantiation_max_assignment_attempts",
+            "instantiation_max_position_variants",
+            "instantiation_max_frequency_variants",
+            "instantiation_max_candidates_per_value",
+        ):
+            if int(getattr(self, field_name)) < 1:
+                raise ValueError(f"{field_name} must be at least 1")
+        if int(self.instantiation_max_repeat_count) < 0:
+            raise ValueError("instantiation_max_repeat_count cannot be negative")
 
         # Separate output dir per LLM provider
         self.output_dir = os.path.join(self.output_dir, self.llm_provider)

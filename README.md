@@ -107,7 +107,7 @@ Example input ([`assets/chemical_structure_example.png`](assets/chemical_structu
 
 ## Multimodal Markush Structure Parsing
 
-In addition to backbone recognition, this repository includes a complete multimodal Markush information extraction workflow. Starting from a Markush description in a document, [MinerU](https://github.com/opendatalab/MinerU) (deployed locally) performs layout analysis and OCR to separate the graphical scaffold from the accompanying textual definitions. The cropped backbone image is processed by CLIP-OCSR to generate a backbone pseudo-SMILES representation, whereas the OCR-derived text is parsed by an LLM to extract structured variable definitions. The two outputs are then combined to form a structured Markush representation.
+In addition to backbone recognition, this repository includes a complete multimodal Markush information extraction workflow. Starting from a Markush description in a document, [MinerU](https://github.com/opendatalab/MinerU) (deployed locally) performs layout analysis and OCR to separate the graphical scaffold from the accompanying textual definitions. The cropped backbone image is processed by CLIP-OCSR to generate a backbone pseudo-SMILES representation, whereas the OCR-derived text is parsed by an LLM to extract structured variable definitions. An optional RDKit post-processing stage combines these outputs and enumerates validated concrete molecular SMILES.
 
 See [`markush_parsing/README.md`](markush_parsing/README.md) for detailed usage instructions.
 
@@ -143,8 +143,11 @@ CLIP-OCSR/
 │   ├── image_crop.py           # MinerU layout analysis
 │   ├── ocsr_client.py          # CLIP-OCSR inference wrapper
 │   ├── llm_client.py           # LLM substituent extraction
+│   ├── fragment_resolver.py    # Text definition to molecular fragment mapping
+│   ├── markush_instantiator.py # Graph-based concrete-product generation
 │   ├── evaluate.py             # Evaluation metrics
-│   └── stable_parser.py        # Variable parsing and scoring
+│   ├── stable_parser.py        # Variable parsing and scoring
+│   └── resources/              # Bundled fragment mapping
 ├── benchmark/                  # Markush benchmark source metadata
 ├── configs/                    # YAML configuration files
 ├── assets/                     # Tokenizer, abbreviation data, and sample SMILES for Stage 1/2

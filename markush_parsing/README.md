@@ -5,8 +5,12 @@ This module implements the multimodal Markush information extraction workflow de
 1. **MinerU** — Layout analysis and OCR to separate the graphical scaffold from accompanying textual definitions
 2. **CLIP-OCSR** — Backbone pseudo-SMILES generation from the cropped structure image
 3. **LLM** — Structured variable definition extraction from OCR-derived text
+4. **Optional instantiation** — RDKit-based combination of the pseudo-SMILES and variable definitions into concrete molecular SMILES
 
-The two outputs are combined to form a structured Markush representation that preserves both the graphical backbone information and the text-defined variable constraints.
+The two recognition outputs form a structured Markush representation that
+preserves both the graphical backbone and text-defined constraints. When
+requested, a separate post-processing stage enumerates validated concrete
+molecules without changing the recognition or evaluation results.
 
 ## Prerequisites
 
@@ -147,6 +151,38 @@ python markush_parsing/run.py \
     --llm deepseek
 ```
 
+### Generate concrete molecular SMILES
+
+Add `--instantiate` to combine each predicted backbone pseudo-SMILES with its
+extracted variable definitions:
+
+```bash
+python markush_parsing/run.py \
+    --input /path/to/images \
+    --mineru-dir /path/to/mineru_outputs \
+    --output results/ \
+    --llm deepseek \
+    --instantiate \
+    --max-products 256
+```
+
+The ordinary parsing output is unchanged except for an additional
+`instantiation` object. Its `status` is `complete`, `partial`, or `failed`,
+and every approximation, unresolved definition, and enumeration limit is
+recorded. To process an existing result without rerunning MinerU, OCSR, or the
+LLM:
+
+```bash
+python markush_parsing/run.py \
+    --instantiate-results /path/to/per_sample.jsonl \
+    --instantiation-output /path/to/per_sample_instantiated.jsonl
+```
+
+The fragment mapping used by default is bundled under
+`markush_parsing/resources/`; no other repository or private data path is
+required. See [MARKUSH_INSTANTIATION.md](MARKUSH_INSTANTIATION.md) for
+supported variations, completeness semantics, safeguards, and the Python API.
+
 ### Evaluate saved results
 
 ```bash
@@ -197,6 +233,10 @@ Pseudo-SMILES               Variable definitions
     |
     v
 Structured Markush Representation
+    |
+    v (optional)
+[RDKit graph instantiation]
+Concrete molecular SMILES
 ```
 
 ## Citation
