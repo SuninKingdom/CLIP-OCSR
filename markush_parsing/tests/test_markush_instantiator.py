@@ -159,6 +159,23 @@ class MarkushInstantiatorTests(unittest.TestCase):
         self.assertEqual(result["product_count"], 2)
         self.assertEqual(self.smiles_set(result), {"COC", "CCOCC"})
 
+    def test_repeat_count_limit_is_reported_as_truncation(self):
+        instantiator = MarkushInstantiator(
+            FragmentResolver(fragment_library_path=None),
+            InstantiationLimits(max_repeat_count=2),
+        )
+        result = instantiator.instantiate(
+            "[(CH2)n]O[(CH2)n]", {"n": ["1-3"]}
+        )
+
+        self.assertEqual(result["product_count"], 2)
+        self.assertTrue(result["truncated"])
+        self.assertFalse(result["enumeration_complete"])
+        self.assertEqual(
+            result["frequency"]["values_above_repeat_limit"],
+            {"n": [3]},
+        )
+
     def test_sulfur_oxidation_frequency(self):
         result = self.instantiator.instantiate(
             "CS([R1])[(O)m]",
@@ -174,6 +191,8 @@ class MarkushInstantiatorTests(unittest.TestCase):
             "Cc1ccc([R1$])nc1", {"R1": ["Cl"]}
         )
         self.assertEqual(result["status"], "partial")
+        self.assertTrue(result["enumeration_complete"])
+        self.assertTrue(result["is_fully_enumerated"])
         self.assertGreater(result["product_count"], 1)
         self.assertTrue(result["position_variation"]["present"])
         self.assertEqual(
@@ -375,6 +394,7 @@ class MarkushInstantiatorTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "partial")
         self.assertTrue(result["truncated"])
+        self.assertFalse(result["enumeration_complete"])
         self.assertEqual(result["product_count"], 3)
         self.assertEqual(result["theoretical_product_combinations"], 16)
 
@@ -391,6 +411,136 @@ class MarkushInstantiatorTests(unittest.TestCase):
         self.assertIn(
             "fragment_candidate_limit_applied:R1", result["warnings"]
         )
+
+    def test_default_enumeration_has_no_product_cap(self):
+        result = self.instantiator.instantiate(
+            "[R1]CC[R2]",
+            {"R1": ["halogen"], "R2": ["halogen"]},
+        )
+
+        self.assertEqual(result["theoretical_product_combinations"], 16)
+        self.assertEqual(result["attempted_combinations"], 16)
+        self.assertEqual(result["product_count"], 10)
+        self.assertEqual(result["duplicate_products_removed"], 6)
+        self.assertTrue(result["enumeration_complete"])
+        self.assertFalse(result["truncated"])
+
+    def test_auto_audit_below_threshold_writes_txt_and_jsonl(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            products_path = os.path.join(temp_dir, "products.txt")
+            audit_path = os.path.join(temp_dir, "products_audit.jsonl")
+            result = self.instantiator.instantiate(
+                "c1ccccc1[R1]",
+                {"R1": ["halogen"]},
+                products_path=products_path,
+                audit_path=audit_path,
+                audit_mode="auto",
+                audit_threshold=4,
+            )
+            with open(products_path, "r", encoding="utf-8") as handle:
+                product_lines = [line.strip() for line in handle if line.strip()]
+            with open(audit_path, "r", encoding="utf-8") as handle:
+                audit_rows = [json.loads(line) for line in handle if line.strip()]
+
+        self.assertEqual(len(product_lines), 4)
+        self.assertEqual(len(audit_rows), 4)
+        self.assertEqual(result["products"], [])
+        self.assertEqual(result["product_count"], 4)
+        self.assertTrue(result["enumeration_complete"])
+        self.assertEqual(
+            result["output"]["audit_mode_effective"], "detailed"
+        )
+        self.assertTrue(result["output"]["products_file_written"])
+        self.assertTrue(result["output"]["detailed_audit_written"])
+        self.assertEqual(len(result["output"]["products_sha256"]), 64)
+        self.assertEqual(len(result["output"]["audit_sha256"]), 64)
+
+    def test_auto_audit_above_threshold_writes_only_product_txt(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            products_path = os.path.join(temp_dir, "products.txt")
+            audit_path = os.path.join(temp_dir, "products_audit.jsonl")
+            result = self.instantiator.instantiate(
+                "[R1]CC[R2]",
+                {"R1": ["halogen"], "R2": ["halogen"]},
+                products_path=products_path,
+                audit_path=audit_path,
+                audit_mode="auto",
+                audit_threshold=10,
+            )
+            self.assertTrue(os.path.isfile(products_path))
+            self.assertFalse(os.path.exists(audit_path))
+
+        self.assertEqual(result["theoretical_product_combinations"], 16)
+        self.assertEqual(result["product_count"], 10)
+        self.assertEqual(
+            result["output"]["audit_mode_effective"], "summary_only"
+        )
+        self.assertFalse(result["output"]["detailed_audit_written"])
+
+    def test_audit_always_and_never_override_the_threshold(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            always_products = os.path.join(temp_dir, "always.txt")
+            always_audit = os.path.join(temp_dir, "always_audit.jsonl")
+            always = self.instantiator.instantiate(
+                "c1ccccc1[R1]",
+                {"R1": ["halogen"]},
+                products_path=always_products,
+                audit_path=always_audit,
+                audit_mode="always",
+                audit_threshold=0,
+            )
+
+            never_products = os.path.join(temp_dir, "never.txt")
+            never_audit = os.path.join(temp_dir, "never_audit.jsonl")
+            never = self.instantiator.instantiate(
+                "c1ccccc1[R1]",
+                {"R1": ["halogen"]},
+                products_path=never_products,
+                audit_path=never_audit,
+                audit_mode="never",
+                audit_threshold=100,
+            )
+
+            self.assertTrue(os.path.isfile(always_audit))
+            self.assertFalse(os.path.exists(never_audit))
+
+        self.assertEqual(
+            always["output"]["audit_mode_effective"], "detailed"
+        )
+        self.assertEqual(
+            never["output"]["audit_mode_effective"], "summary_only"
+        )
+
+    def test_overwrite_removes_a_stale_suppressed_audit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            products_path = os.path.join(temp_dir, "products.txt")
+            audit_path = os.path.join(temp_dir, "products_audit.jsonl")
+            with open(audit_path, "w", encoding="utf-8") as handle:
+                handle.write("stale audit\n")
+
+            result = self.instantiator.instantiate(
+                "c1ccccc1[R1]",
+                {"R1": ["halogen"]},
+                products_path=products_path,
+                audit_path=audit_path,
+                audit_mode="never",
+                overwrite_outputs=True,
+            )
+
+            self.assertTrue(os.path.isfile(products_path))
+            self.assertFalse(os.path.exists(audit_path))
+            self.assertFalse(result["output"]["detailed_audit_written"])
+
+    def test_product_and_audit_paths_must_differ(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = os.path.join(temp_dir, "products.txt")
+            with self.assertRaisesRegex(ValueError, "must differ"):
+                self.instantiator.instantiate(
+                    "c1ccccc1[R1]",
+                    {"R1": ["halogen"]},
+                    products_path=output_path,
+                    audit_path=output_path,
+                )
 
 
 if __name__ == "__main__":

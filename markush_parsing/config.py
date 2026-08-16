@@ -48,12 +48,17 @@ class Config:
     enable_instantiation: bool = False
     use_fragment_library: bool = True
     fragment_library_path: str = ""
-    instantiation_max_products: int = 256
-    instantiation_max_assignment_attempts: int = 10000
-    instantiation_max_position_variants: int = 64
-    instantiation_max_frequency_variants: int = 64
-    instantiation_max_repeat_count: int = 100
-    instantiation_max_candidates_per_value: int = 64
+    # ``None`` means exhaustive enumeration. Limits are opt-in deployment
+    # safeguards and are never applied silently.
+    instantiation_max_products: int | None = None
+    instantiation_max_assignment_attempts: int | None = None
+    instantiation_max_position_variants: int | None = None
+    instantiation_max_frequency_variants: int | None = None
+    instantiation_max_repeat_count: int | None = None
+    instantiation_max_candidates_per_value: int | None = None
+    instantiation_audit_mode: str = "auto"
+    instantiation_audit_threshold: int = 10000
+    instantiation_overwrite_outputs: bool = False
 
     def __post_init__(self):
         self.dataset_dir = self.dataset_dir or os.getenv("MARKUSH_DATASET_DIR", "")
@@ -93,10 +98,20 @@ class Config:
             "instantiation_max_frequency_variants",
             "instantiation_max_candidates_per_value",
         ):
-            if int(getattr(self, field_name)) < 1:
+            value = getattr(self, field_name)
+            if value is not None and int(value) < 1:
                 raise ValueError(f"{field_name} must be at least 1")
-        if int(self.instantiation_max_repeat_count) < 0:
+        if (
+            self.instantiation_max_repeat_count is not None
+            and int(self.instantiation_max_repeat_count) < 0
+        ):
             raise ValueError("instantiation_max_repeat_count cannot be negative")
+        if self.instantiation_audit_mode not in {"auto", "always", "never"}:
+            raise ValueError(
+                "instantiation_audit_mode must be auto, always, or never"
+            )
+        if int(self.instantiation_audit_threshold) < 0:
+            raise ValueError("instantiation_audit_threshold cannot be negative")
 
         # Separate output dir per LLM provider
         self.output_dir = os.path.join(self.output_dir, self.llm_provider)

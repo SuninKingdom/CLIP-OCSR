@@ -33,6 +33,7 @@ import logging
 import os
 import glob
 import platform
+import re
 import sys
 
 from rdkit import rdBase
@@ -68,6 +69,11 @@ def configure_instantiation(config: Config, args, enabled: bool) -> Config:
     config.instantiation_max_candidates_per_value = (
         args.max_candidates_per_value
     )
+    config.instantiation_audit_mode = args.audit_mode
+    config.instantiation_audit_threshold = args.audit_threshold
+    config.instantiation_overwrite_outputs = (
+        args.overwrite_instantiation_output
+    )
     return config
 
 
@@ -86,6 +92,15 @@ def first_saved_value(row: dict, field_names: tuple[str, ...]):
         if value is not None and value != "":
             return value, field_name
     return None, "missing"
+
+
+def product_file_stem(row: dict, line_number: int) -> str:
+    """Return a deterministic, filesystem-safe per-sample output stem."""
+    source_name = str(row.get("image_name") or f"sample_{line_number}")
+    source_stem = os.path.splitext(os.path.basename(source_name))[0]
+    safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", source_stem)
+    safe_stem = safe_stem.strip("._") or "sample"
+    return f"{line_number:06d}_{safe_stem}"
 
 
 def collect_images(input_path: str) -> list[str]:
@@ -192,6 +207,11 @@ def cmd_instantiate_results(args):
             "Instantiation output must differ from the source results file"
         )
     summary_path = os.path.splitext(output_path)[0] + "_summary.json"
+    products_dir = (
+        os.path.abspath(args.instantiation_products_dir)
+        if args.instantiation_products_dir
+        else os.path.splitext(output_path)[0] + "_products"
+    )
     if summary_path == input_path:
         raise ValueError(
             "Instantiation summary path must differ from the source results file"
@@ -205,7 +225,18 @@ def cmd_instantiate_results(args):
             + ", ".join(existing_outputs)
             + ". Pass --overwrite-instantiation-output to replace them."
         )
+    if (
+        os.path.isdir(products_dir)
+        and os.listdir(products_dir)
+        and not args.overwrite_instantiation_output
+    ):
+        raise FileExistsError(
+            "Refusing to write into a non-empty products directory: "
+            f"{products_dir}. Pass --overwrite-instantiation-output to "
+            "replace matching files."
+        )
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    os.makedirs(products_dir, exist_ok=True)
 
     config = Config(llm_provider=args.llm)
     configure_instantiation(config, args, enabled=True)
@@ -218,9 +249,14 @@ def cmd_instantiate_results(args):
     rows_read = 0
     rows_written = 0
     malformed_rows = 0
+    total_theoretical_combinations = 0
+    total_attempted_combinations = 0
+    total_invalid_combinations = 0
+    total_duplicate_products_removed = 0
     total_products = 0
     fully_enumerated = 0
     truncated = 0
+    detailed_audit_samples = 0
     temporary_path = output_path + ".tmp"
     try:
         with open(input_path, "r", encoding="utf-8") as source, open(
@@ -260,9 +296,21 @@ def cmd_instantiate_results(args):
                     )
                     smiles_field_counts[smiles_field] += 1
                     variables_field_counts[variables_field] += 1
+                    sample_stem = product_file_stem(row, line_number)
                     instantiation = instantiator.instantiate(
                         predicted_smiles,
                         predicted_variables,
+                        products_path=os.path.join(
+                            products_dir, f"{sample_stem}_smiles.txt"
+                        ),
+                        audit_path=os.path.join(
+                            products_dir, f"{sample_stem}_audit.jsonl"
+                        ),
+                        audit_mode=args.audit_mode,
+                        audit_threshold=args.audit_threshold,
+                        overwrite_outputs=(
+                            args.overwrite_instantiation_output
+                        ),
                     )
                 except Exception as exc:
                     logger.exception(
@@ -275,6 +323,7 @@ def cmd_instantiate_results(args):
                         "status": "failed",
                         "failure_reason": "internal_instantiation_error",
                         "is_fully_enumerated": False,
+                        "enumeration_complete": False,
                         "product_count": 0,
                         "products": [],
                         "errors": [f"{type(exc).__name__}: {exc}"],
@@ -291,10 +340,27 @@ def cmd_instantiate_results(args):
                 if failure_reason:
                     failure_reasons[failure_reason] += 1
                 total_products += int(instantiation.get("product_count", 0))
+                total_theoretical_combinations += int(
+                    instantiation.get("theoretical_product_combinations", 0)
+                )
+                total_attempted_combinations += int(
+                    instantiation.get("attempted_combinations", 0)
+                )
+                total_invalid_combinations += int(
+                    instantiation.get("invalid_combinations", 0)
+                )
+                total_duplicate_products_removed += int(
+                    instantiation.get("duplicate_products_removed", 0)
+                )
                 fully_enumerated += int(
                     bool(instantiation.get("is_fully_enumerated"))
                 )
                 truncated += int(bool(instantiation.get("truncated")))
+                detailed_audit_samples += int(
+                    instantiation.get("output", {}).get(
+                        "audit_mode_effective"
+                    ) == "detailed"
+                )
         os.replace(temporary_path, output_path)
     except Exception:
         if os.path.exists(temporary_path):
@@ -302,7 +368,7 @@ def cmd_instantiate_results(args):
         raise
 
     summary = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "mode": "offline_saved_prediction_instantiation",
         "command_argv": list(sys.argv),
@@ -310,6 +376,7 @@ def cmd_instantiate_results(args):
         "source_sha256": file_sha256(input_path),
         "output_results": output_path,
         "output_sha256": file_sha256(output_path),
+        "products_directory": products_dir,
         "rows_read": rows_read,
         "rows_written": rows_written,
         "malformed_rows_skipped": malformed_rows,
@@ -321,6 +388,15 @@ def cmd_instantiate_results(args):
         },
         "fully_enumerated_samples": fully_enumerated,
         "truncated_samples": truncated,
+        "detailed_audit_samples": detailed_audit_samples,
+        "total_theoretical_product_combinations": (
+            total_theoretical_combinations
+        ),
+        "total_attempted_combinations": total_attempted_combinations,
+        "total_invalid_combinations": total_invalid_combinations,
+        "total_duplicate_products_removed": (
+            total_duplicate_products_removed
+        ),
         "total_unique_products": total_products,
         "settings": {
             "fragment_library": dict(instantiator.resolver.library_metadata),
@@ -340,6 +416,10 @@ def cmd_instantiate_results(args):
                     instantiator.resolver.max_candidates_per_value
                 ),
             },
+            "audit": {
+                "mode": args.audit_mode,
+                "theoretical_combination_threshold": args.audit_threshold,
+            },
         },
         "software": {
             "python": platform.python_version(),
@@ -352,6 +432,7 @@ def cmd_instantiate_results(args):
         json.dump(summary, handle, ensure_ascii=False, indent=2)
 
     print(f"Instantiated results: {output_path}")
+    print(f"Product SMILES directory: {products_dir}")
     print(f"Summary: {summary_path}")
     print(f"Status counts: {dict(status_counts)}")
     print(f"Unique products written: {total_products}")
@@ -446,7 +527,18 @@ def main():
     parser.add_argument(
         "--instantiation-output",
         type=str,
-        help="Output JSONL for --instantiate-results (source is never overwritten)",
+        help=(
+            "Lightweight per-sample manifest JSONL for --instantiate-results "
+            "(source is never overwritten)"
+        ),
+    )
+    parser.add_argument(
+        "--instantiation-products-dir",
+        type=str,
+        help=(
+            "Directory for per-sample *_smiles.txt and optional audit JSONL "
+            "files (defaults beside the manifest)"
+        ),
     )
     parser.add_argument(
         "--overwrite-instantiation-output",
@@ -466,12 +558,51 @@ def main():
         action="store_true",
         help="Use only reviewed built-in mappings and deterministic rules",
     )
-    parser.add_argument("--max-products", type=int, default=256)
-    parser.add_argument("--max-assignment-attempts", type=int, default=10000)
-    parser.add_argument("--max-position-variants", type=int, default=64)
-    parser.add_argument("--max-frequency-variants", type=int, default=64)
-    parser.add_argument("--max-repeat-count", type=int, default=100)
-    parser.add_argument("--max-candidates-per-value", type=int, default=64)
+    parser.add_argument(
+        "--audit-mode",
+        choices=["auto", "always", "never"],
+        default="auto",
+        help=(
+            "Detailed per-product audit: auto writes it when the theoretical "
+            "combination count is within --audit-threshold; always/never "
+            "override that decision"
+        ),
+    )
+    parser.add_argument(
+        "--audit-threshold",
+        type=int,
+        default=10000,
+        help="Theoretical combination threshold for --audit-mode auto",
+    )
+    parser.add_argument(
+        "--max-products",
+        type=int,
+        default=None,
+        help=(
+            "Optional maximum number of unique SMILES to write; omitted "
+            "means exhaustive enumeration"
+        ),
+    )
+    parser.add_argument(
+        "--max-assignment-attempts", type=int, default=None,
+        help="Optional cap on raw assignment attempts (default: unlimited)",
+    )
+    parser.add_argument(
+        "--max-position-variants", type=int, default=None,
+        help="Optional cap on position variants (default: unlimited)",
+    )
+    parser.add_argument(
+        "--max-frequency-variants", type=int, default=None,
+        help="Optional cap on frequency variants (default: unlimited)",
+    )
+    parser.add_argument(
+        "--max-repeat-count", type=int, default=None,
+        help="Optional largest supported repeat count (default: unlimited)",
+    )
+    parser.add_argument(
+        "--max-candidates-per-value", type=int, default=None,
+        help="Optional fragment-candidate cap per value (default: unlimited)",
+    )
 
     args = parser.parse_args()
 
@@ -487,10 +618,12 @@ def main():
         "--max-candidates-per-value": args.max_candidates_per_value,
     }
     for option, value in positive_limits.items():
-        if value < 1:
+        if value is not None and value < 1:
             parser.error(f"{option} must be at least 1")
-    if args.max_repeat_count < 0:
+    if args.max_repeat_count is not None and args.max_repeat_count < 0:
         parser.error("--max-repeat-count cannot be negative")
+    if args.audit_threshold < 0:
+        parser.error("--audit-threshold cannot be negative")
 
     if args.instantiate_results:
         cmd_instantiate_results(args)

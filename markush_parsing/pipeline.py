@@ -69,6 +69,17 @@ def run_pipeline_single(
                 result["instantiation"] = instantiator.instantiate(
                     result["predicted_smiles"],
                     result["predicted_variables"],
+                    products_path=os.path.join(
+                        save_dir, "concrete_smiles.txt"
+                    ),
+                    audit_path=os.path.join(
+                        save_dir, "concrete_smiles_audit.jsonl"
+                    ),
+                    audit_mode=config.instantiation_audit_mode,
+                    audit_threshold=config.instantiation_audit_threshold,
+                    overwrite_outputs=(
+                        config.instantiation_overwrite_outputs
+                    ),
                 )
             except Exception as exc:
                 logger.exception(
@@ -79,6 +90,7 @@ def run_pipeline_single(
                     "status": "failed",
                     "failure_reason": "internal_instantiation_error",
                     "is_fully_enumerated": False,
+                    "enumeration_complete": False,
                     "product_count": 0,
                     "products": [],
                     "errors": [f"{type(exc).__name__}: {exc}"],

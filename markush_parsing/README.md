@@ -162,26 +162,70 @@ python markush_parsing/run.py \
     --mineru-dir /path/to/mineru_outputs \
     --output results/ \
     --llm deepseek \
-    --instantiate \
-    --max-products 256
+    --instantiate
 ```
 
-The ordinary parsing output is unchanged except for an additional
-`instantiation` object. Its `status` is `complete`, `partial`, or `failed`,
-and every approximation, unresolved definition, and enumeration limit is
-recorded. To process an existing result without rerunning MinerU, OCSR, or the
-LLM:
+For finitely resolved definitions, concrete structures are exhaustively
+enumerated by default; there is no implicit product-count cap. Each image
+directory receives a plain-text file containing one unique canonical isomeric
+SMILES per line:
+
+```text
+results/<provider>/<image-stem>/
+  result.json
+  concrete_smiles.txt
+  concrete_smiles_audit.jsonl   # written automatically for smaller spaces
+```
+
+Before final fragment assignment, the program calculates the theoretical
+Cartesian-product count. With the default `--audit-mode auto`, detailed
+per-product audit JSONL is written when that count is at most 10,000. Above
+that threshold, all unique SMILES are still generated, but only the SMILES
+text file and lightweight result summary are retained. The threshold controls
+audit size, not chemical-space enumeration.
+
+The policy can be overridden explicitly:
+
+```bash
+# Always retain detailed per-product provenance
+python markush_parsing/run.py ... --instantiate --audit-mode always
+
+# Never retain detailed per-product provenance
+python markush_parsing/run.py ... --instantiate --audit-mode never
+
+# Change the automatic detailed-audit threshold
+python markush_parsing/run.py ... --instantiate --audit-threshold 50000
+
+# Deliberately stop after one million unique products
+python markush_parsing/run.py ... --instantiate --max-products 1000000
+```
+
+`--max-products` is optional. If supplied and reached, the result is marked
+`truncated` and `partial`; without it, every planned finite assignment is
+attempted. Chemical interpretation (`complete`/`partial`/`failed`) is reported
+separately from `enumeration_complete`. Thus an inferred `[R1$]` host-ring
+expansion can be fully enumerated while remaining chemically `partial`.
+
+To process an existing result without rerunning MinerU, OCSR, or the LLM:
 
 ```bash
 python markush_parsing/run.py \
     --instantiate-results /path/to/per_sample.jsonl \
-    --instantiation-output /path/to/per_sample_instantiated.jsonl
+    --instantiation-output /path/to/instantiated_manifest.jsonl \
+    --instantiation-products-dir /path/to/instantiated_products
 ```
+
+This produces a lightweight per-sample manifest, a run summary, and one
+`*_smiles.txt` file per sample. Detailed `*_audit.jsonl` files follow the same
+audit policy. Product and audit lines are streamed; only canonical SMILES keys
+needed for exact deduplication are retained in memory.
 
 The fragment mapping used by default is bundled under
 `markush_parsing/resources/`; no other repository or private data path is
-required. See [MARKUSH_INSTANTIATION.md](MARKUSH_INSTANTIATION.md) for
-supported variations, completeness semantics, safeguards, and the Python API.
+required. See [MARKUSH_INSTANTIATION.md](MARKUSH_INSTANTIATION.md) for the
+theoretical-count definition, two-stage deduplication, exact output schemas,
+audit decision table, completeness semantics, position-variation boundary,
+large-output considerations, and Python API.
 
 ### Evaluate saved results
 

@@ -261,12 +261,19 @@ class FragmentResolver:
         fragment_library_path: str | os.PathLike | None = (
             DEFAULT_FRAGMENT_LIBRARY_PATH
         ),
-        max_candidates_per_value: int = 64,
+        max_candidates_per_value: int | None = None,
     ):
         self.fragment_library_path = (
             str(fragment_library_path) if fragment_library_path else None
         )
-        self.max_candidates_per_value = max(1, int(max_candidates_per_value))
+        if max_candidates_per_value is None:
+            self.max_candidates_per_value = None
+        else:
+            self.max_candidates_per_value = int(max_candidates_per_value)
+            if self.max_candidates_per_value < 1:
+                raise ValueError(
+                    "max_candidates_per_value must be at least 1 or None"
+                )
         self._library_description_index: dict[str, list[dict]] = {}
         self._library_name_index: dict[str, list[dict]] = {}
         self.library_metadata = {
@@ -438,7 +445,10 @@ class FragmentResolver:
                 item.name.lower(),
             ),
         )
-        if len(candidates) > self.max_candidates_per_value:
+        if (
+            self.max_candidates_per_value is not None
+            and len(candidates) > self.max_candidates_per_value
+        ):
             warnings.append(
                 f"candidate_limit_applied:{len(candidates)}->"
                 f"{self.max_candidates_per_value}"

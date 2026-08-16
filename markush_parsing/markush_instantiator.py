@@ -19,9 +19,13 @@ of being silently treated as hydrogen or as a complete chemical space.
 
 from __future__ import annotations
 
+import hashlib
 import itertools
+import json
 import math
+import os
 import re
+import tempfile
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,29 +49,183 @@ LIKELY_MARKUSH_LABEL = re.compile(
     r"(?:R[A-Za-z0-9'\"-]*|[XYZABGLMQTUW][A-Za-z0-9'\"-]*|Ar|Cy|Hal)\$?"
 )
 
+AUDIT_MODES = {"auto", "always", "never"}
+DEFAULT_AUDIT_THRESHOLD = 10_000
+
 
 @dataclass(frozen=True)
 class InstantiationLimits:
-    max_products: int = 256
-    max_assignment_attempts: int = 10000
-    max_position_variants: int = 64
-    max_frequency_variants: int = 64
-    max_repeat_count: int = 100
+    """Optional user-requested bounds; ``None`` means exhaustive."""
+
+    max_products: int | None = None
+    max_assignment_attempts: int | None = None
+    max_position_variants: int | None = None
+    max_frequency_variants: int | None = None
+    max_repeat_count: int | None = None
 
     def normalized(self) -> "InstantiationLimits":
+        def positive_or_none(value, name: str) -> int | None:
+            if value is None:
+                return None
+            normalized = int(value)
+            if normalized < 1:
+                raise ValueError(f"{name} must be at least 1 or None")
+            return normalized
+
+        repeat_limit = self.max_repeat_count
+        if repeat_limit is not None:
+            repeat_limit = int(repeat_limit)
+            if repeat_limit < 0:
+                raise ValueError("max_repeat_count cannot be negative")
         return InstantiationLimits(
-            max_products=max(1, int(self.max_products)),
-            max_assignment_attempts=max(1, int(self.max_assignment_attempts)),
-            max_position_variants=max(1, int(self.max_position_variants)),
-            max_frequency_variants=max(1, int(self.max_frequency_variants)),
-            max_repeat_count=max(0, int(self.max_repeat_count)),
+            max_products=positive_or_none(
+                self.max_products, "max_products"
+            ),
+            max_assignment_attempts=positive_or_none(
+                self.max_assignment_attempts,
+                "max_assignment_attempts",
+            ),
+            max_position_variants=positive_or_none(
+                self.max_position_variants,
+                "max_position_variants",
+            ),
+            max_frequency_variants=positive_or_none(
+                self.max_frequency_variants,
+                "max_frequency_variants",
+            ),
+            max_repeat_count=repeat_limit,
         )
+
+
+class _ProductCollector:
+    """Deduplicate products and optionally stream them to atomic text files."""
+
+    def __init__(
+        self,
+        products_path: str | os.PathLike | None,
+        audit_path: str | os.PathLike | None,
+        *,
+        overwrite: bool,
+    ):
+        self.products_path = (
+            Path(products_path) if products_path is not None else None
+        )
+        self.audit_path = Path(audit_path) if audit_path is not None else None
+        if self.audit_path is not None and self.products_path is None:
+            raise ValueError("audit_path requires products_path")
+
+        self._seen: set[str] = set()
+        self.records: list[dict] | None = (
+            [] if self.products_path is None else None
+        )
+        self._products_handle = None
+        self._audit_handle = None
+        self._products_temp_path: Path | None = None
+        self._audit_temp_path: Path | None = None
+        self._products_digest = hashlib.sha256()
+        self._audit_digest = hashlib.sha256()
+
+        targets = [
+            path for path in (self.products_path, self.audit_path)
+            if path is not None
+        ]
+        for path in targets:
+            if path.exists() and not overwrite:
+                raise FileExistsError(
+                    f"Refusing to overwrite instantiation output: {path}"
+                )
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            if self.products_path is not None:
+                self._products_handle, self._products_temp_path = (
+                    self._open_temporary(self.products_path)
+                )
+            if self.audit_path is not None:
+                self._audit_handle, self._audit_temp_path = (
+                    self._open_temporary(self.audit_path)
+                )
+        except Exception:
+            self.abort()
+            raise
+
+    @staticmethod
+    def _open_temporary(final_path: Path):
+        handle = tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=str(final_path.parent),
+            prefix=f".{final_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        )
+        return handle, Path(handle.name)
+
+    @property
+    def count(self) -> int:
+        return len(self._seen)
+
+    def add(self, smiles: str, record: dict) -> bool:
+        """Add one unique product; return false for a duplicate."""
+        if smiles in self._seen:
+            return False
+        self._seen.add(smiles)
+        if self.records is not None:
+            self.records.append(record)
+        if self._products_handle is not None:
+            line = smiles + "\n"
+            self._products_handle.write(line)
+            self._products_digest.update(line.encode("utf-8"))
+        if self._audit_handle is not None:
+            line = json.dumps(
+                record,
+                ensure_ascii=False,
+                default=str,
+                separators=(",", ":"),
+            ) + "\n"
+            self._audit_handle.write(line)
+            self._audit_digest.update(line.encode("utf-8"))
+        return True
+
+    def finalize(self) -> dict:
+        for handle in (self._products_handle, self._audit_handle):
+            if handle is not None and not handle.closed:
+                handle.flush()
+                os.fsync(handle.fileno())
+                handle.close()
+        if self._products_temp_path is not None:
+            os.replace(self._products_temp_path, self.products_path)
+            self._products_temp_path = None
+        if self._audit_temp_path is not None:
+            os.replace(self._audit_temp_path, self.audit_path)
+            self._audit_temp_path = None
+        return {
+            "products_sha256": (
+                self._products_digest.hexdigest()
+                if self.products_path is not None else None
+            ),
+            "audit_sha256": (
+                self._audit_digest.hexdigest()
+                if self.audit_path is not None else None
+            ),
+        }
+
+    def abort(self) -> None:
+        for handle in (self._products_handle, self._audit_handle):
+            if handle is not None and not handle.closed:
+                handle.close()
+        for path in (self._products_temp_path, self._audit_temp_path):
+            if path is not None:
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    pass
 
 
 class MarkushInstantiator:
     """Convert a backbone pseudo-SMILES plus variable table to products."""
 
-    schema_version = "1.1"
+    schema_version = "2.0"
 
     def __init__(
         self,
@@ -366,14 +524,18 @@ class MarkushInstantiator:
             integers, invalid = self._integer_values(variables.get(label, []))
             if invalid:
                 report["invalid_values"][label] = invalid
-            above_limit = [
-                value for value in integers if value > self.limits.max_repeat_count
-            ]
-            allowed = [
-                value for value in integers if value <= self.limits.max_repeat_count
-            ]
+            repeat_limit = self.limits.max_repeat_count
+            above_limit = (
+                [value for value in integers if value > repeat_limit]
+                if repeat_limit is not None else []
+            )
+            allowed = (
+                [value for value in integers if value <= repeat_limit]
+                if repeat_limit is not None else integers
+            )
             if above_limit:
                 report["values_above_repeat_limit"][label] = above_limit
+                report["truncated"] = True
             if not allowed:
                 report["unsupported_tokens"].append(
                     f"{label}:no_supported_integer_counts"
@@ -388,9 +550,12 @@ class MarkushInstantiator:
         combinations = itertools.product(
             *(values_by_label[label] for label in token_labels)
         )
-        for counts in itertools.islice(
-            combinations, self.limits.max_frequency_variants
-        ):
+        frequency_limit = self.limits.max_frequency_variants
+        selected_combinations = (
+            itertools.islice(combinations, frequency_limit)
+            if frequency_limit is not None else combinations
+        )
+        for counts in selected_combinations:
             assignment = dict(zip(token_labels, counts))
 
             def replacement(match: re.Match) -> str:
@@ -404,7 +569,7 @@ class MarkushInstantiator:
             })
 
         report["generated_variants"] = len(variants)
-        report["truncated"] = (
+        report["truncated"] |= (
             report["theoretical_assignments"] > len(variants)
         )
         return variants, report
@@ -605,8 +770,9 @@ class MarkushInstantiator:
             for candidate in expanded:
                 deduplicated.setdefault(self._core_key(candidate), candidate)
             expanded = list(deduplicated.values())
-            if len(expanded) > self.limits.max_position_variants:
-                expanded = expanded[: self.limits.max_position_variants]
+            position_limit = self.limits.max_position_variants
+            if position_limit is not None and len(expanded) > position_limit:
+                expanded = expanded[:position_limit]
                 truncated = True
             variants = expanded
             reports.append({
@@ -889,18 +1055,49 @@ class MarkushInstantiator:
     def _candidate_assignment(candidate: FragmentCandidate) -> dict:
         return candidate.to_dict()
 
-    def instantiate(self, pseudo_smiles: str, variables) -> dict:
+    def instantiate(
+        self,
+        pseudo_smiles: str,
+        variables,
+        *,
+        products_path: str | os.PathLike | None = None,
+        audit_path: str | os.PathLike | None = None,
+        audit_mode: str = "auto",
+        audit_threshold: int = DEFAULT_AUDIT_THRESHOLD,
+        overwrite_outputs: bool = False,
+    ) -> dict:
         """Instantiate one parsed Markush representation.
 
-        The returned object is deliberately verbose so every approximation,
-        skipped value, invalid combination, and enumeration limit remains
-        auditable for manuscript experiments.
+        Without ``products_path``, unique product records are returned in
+        memory for backwards-compatible Python use. With ``products_path``,
+        canonical SMILES are streamed one per line and product records are not
+        embedded in the returned summary. Detailed product-level JSONL audit
+        is selected by ``audit_mode`` after the theoretical combination count
+        is known.
         """
+        audit_mode = str(audit_mode).strip().lower()
+        if audit_mode not in AUDIT_MODES:
+            raise ValueError(
+                f"audit_mode must be one of {sorted(AUDIT_MODES)}"
+            )
+        audit_threshold = int(audit_threshold)
+        if audit_threshold < 0:
+            raise ValueError("audit_threshold cannot be negative")
+        if audit_path is not None and products_path is None:
+            raise ValueError("audit_path requires products_path")
+        if (
+            products_path is not None
+            and audit_path is not None
+            and Path(products_path).resolve() == Path(audit_path).resolve()
+        ):
+            raise ValueError("products_path and audit_path must differ")
+
         result = {
             "schema_version": self.schema_version,
             "status": "failed",
             "failure_reason": None,
             "is_fully_enumerated": False,
+            "enumeration_complete": False,
             "input_pseudo_smiles": pseudo_smiles,
             "normalized_pseudo_smiles": None,
             "input_variables": variables,
@@ -934,6 +1131,34 @@ class MarkushInstantiator:
             "product_count": 0,
             "truncated": False,
             "products": [],
+            "output": {
+                "mode": (
+                    "streamed_files"
+                    if products_path is not None else "embedded"
+                ),
+                "products_embedded": products_path is None,
+                "products_file": (
+                    str(products_path) if products_path is not None else None
+                ),
+                "products_file_written": False,
+                "products_format": (
+                    "canonical_isomeric_smiles_one_per_line"
+                    if products_path is not None else "embedded_records"
+                ),
+                "audit_mode_requested": (
+                    audit_mode if products_path is not None else "embedded"
+                ),
+                "audit_threshold": (
+                    audit_threshold if products_path is not None else None
+                ),
+                "audit_mode_effective": (
+                    None if products_path is not None else "embedded"
+                ),
+                "detailed_audit_file": None,
+                "detailed_audit_written": False,
+                "products_sha256": None,
+                "audit_sha256": None,
+            },
             "errors": [],
             "warnings": [],
         }
@@ -963,6 +1188,7 @@ class MarkushInstantiator:
             pseudo_smiles, normalized_variables
         )
         result["frequency"] = frequency_report
+        result["truncated"] |= bool(frequency_report.get("truncated"))
         if not frequency_variants:
             result["failure_reason"] = "frequency_expansion_failed"
             result["warnings"].append("frequency_expansion_failed")
@@ -1100,68 +1326,141 @@ class MarkushInstantiator:
         theoretical = len(backbone_records) * assignments_per_backbone
         result["theoretical_product_combinations"] = theoretical
 
-        products_by_smiles = {}
-        stop = False
-        for backbone_index, backbone in enumerate(backbone_records):
-            candidate_products = (
-                itertools.product(
-                    *(candidates_by_label[label] for label in structural_labels)
+        effective_audit_path = None
+        if products_path is not None:
+            detailed_audit = (
+                audit_mode == "always"
+                or (
+                    audit_mode == "auto"
+                    and theoretical <= audit_threshold
                 )
-                if structural_labels
-                else [()]
             )
-            for selected in candidate_products:
-                if result["attempted_combinations"] >= self.limits.max_assignment_attempts:
-                    result["truncated"] = True
-                    stop = True
-                    break
-                result["attempted_combinations"] += 1
-                product_mol = Chem.Mol(backbone["mol"])
-                assignment = {}
-                valid = True
-                for label, candidate in zip(structural_labels, selected):
-                    product_mol = self._apply_candidate(
-                        product_mol, label, candidate
+            if detailed_audit:
+                if audit_path is not None:
+                    effective_audit_path = audit_path
+                else:
+                    product_file = Path(products_path)
+                    effective_audit_path = product_file.with_name(
+                        f"{product_file.stem}_audit.jsonl"
                     )
-                    assignment[label] = self._candidate_assignment(candidate)
-                    if product_mol is None:
-                        valid = False
-                        break
-                if not valid:
-                    result["invalid_combinations"] += 1
-                    continue
-                smiles = self._final_smiles(product_mol)
-                if smiles is None:
-                    result["invalid_combinations"] += 1
-                    continue
-                product_record = {
-                    "smiles": smiles,
-                    "backbone_variant_index": backbone_index,
-                    "position_variant_index": backbone["position_variant_index"],
-                    "position_assignment": backbone["position_assignment"],
-                    "frequency_assignment": backbone["frequency_assignment"],
-                    "variable_assignment": assignment,
-                }
-                if smiles in products_by_smiles:
-                    result["duplicate_products_removed"] += 1
-                    continue
-                products_by_smiles[smiles] = product_record
-                if len(products_by_smiles) >= self.limits.max_products:
-                    result["truncated"] |= (
-                        result["attempted_combinations"] < theoretical
-                    )
-                    stop = True
-                    break
-            if stop:
-                break
+            result["output"]["audit_mode_effective"] = (
+                "detailed" if detailed_audit else "summary_only"
+            )
+            result["output"]["detailed_audit_file"] = (
+                str(effective_audit_path)
+                if effective_audit_path is not None else None
+            )
+            if (
+                effective_audit_path is None
+                and audit_path is not None
+                and overwrite_outputs
+            ):
+                # A rerun that intentionally disables detailed audit must not
+                # leave a same-named audit from an earlier run looking current.
+                Path(audit_path).unlink(missing_ok=True)
 
-        result["products"] = list(products_by_smiles.values())
-        result["product_count"] = len(result["products"])
+        collector = _ProductCollector(
+            products_path,
+            effective_audit_path,
+            overwrite=overwrite_outputs,
+        )
+        try:
+            stop = False
+            for backbone_index, backbone in enumerate(backbone_records):
+                candidate_products = (
+                    itertools.product(
+                        *(
+                            candidates_by_label[label]
+                            for label in structural_labels
+                        )
+                    )
+                    if structural_labels
+                    else [()]
+                )
+                for selected in candidate_products:
+                    attempt_limit = self.limits.max_assignment_attempts
+                    if (
+                        attempt_limit is not None
+                        and result["attempted_combinations"] >= attempt_limit
+                    ):
+                        result["truncated"] = True
+                        stop = True
+                        break
+                    result["attempted_combinations"] += 1
+                    product_mol = Chem.Mol(backbone["mol"])
+                    assignment = {}
+                    valid = True
+                    for label, candidate in zip(structural_labels, selected):
+                        product_mol = self._apply_candidate(
+                            product_mol, label, candidate
+                        )
+                        assignment[label] = self._candidate_assignment(
+                            candidate
+                        )
+                        if product_mol is None:
+                            valid = False
+                            break
+                    if not valid:
+                        result["invalid_combinations"] += 1
+                        continue
+                    smiles = self._final_smiles(product_mol)
+                    if smiles is None:
+                        result["invalid_combinations"] += 1
+                        continue
+                    product_record = {
+                        "smiles": smiles,
+                        "backbone_variant_index": backbone_index,
+                        "position_variant_index": (
+                            backbone["position_variant_index"]
+                        ),
+                        "position_assignment": backbone[
+                            "position_assignment"
+                        ],
+                        "frequency_assignment": backbone[
+                            "frequency_assignment"
+                        ],
+                        "variable_assignment": assignment,
+                    }
+                    if not collector.add(smiles, product_record):
+                        result["duplicate_products_removed"] += 1
+                        continue
+                    product_limit = self.limits.max_products
+                    if (
+                        product_limit is not None
+                        and collector.count >= product_limit
+                    ):
+                        result["truncated"] |= (
+                            result["attempted_combinations"] < theoretical
+                        )
+                        stop = True
+                        break
+                if stop:
+                    break
+            output_hashes = collector.finalize()
+        except Exception:
+            collector.abort()
+            raise
+
+        if collector.records is not None:
+            result["products"] = collector.records
+        result["product_count"] = collector.count
+        result["output"].update(output_hashes)
+        result["output"]["products_file_written"] = (
+            products_path is not None
+        )
+        result["output"]["detailed_audit_written"] = (
+            effective_audit_path is not None
+        )
         result["truncated"] |= bool(
             frequency_report.get("truncated")
             or result["position_variation"]["truncated"]
         )
-        if not result["products"]:
+        result["enumeration_complete"] = bool(
+            not result["truncated"]
+            and result["attempted_combinations"] == theoretical
+        )
+        result["is_fully_enumerated"] = result["enumeration_complete"]
+        if not result["product_count"]:
             result["failure_reason"] = "no_valid_concrete_products"
             result["warnings"].append("no_valid_concrete_products")
             return result
@@ -1190,7 +1489,6 @@ class MarkushInstantiator:
         result["warnings"].extend(partial_reasons)
         result["status"] = "partial" if partial_reasons else "complete"
         result["failure_reason"] = None
-        result["is_fully_enumerated"] = result["status"] == "complete"
         return result
 
 
