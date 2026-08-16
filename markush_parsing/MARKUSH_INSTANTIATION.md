@@ -41,7 +41,7 @@ the reviewed built-in mappings and deterministic range rules.
 | `single bond` | Degree-two placeholder contraction |
 | `[(CH2)n]`, `[O(CH2)n]` | Linear frequency expansion from integer values or ranges |
 | `S...[(O)m]` | Sulfide/sulfoxide/sulfone-style `m = 0/1/2` expansion |
-| `[R1$]` | Candidate sites inferred within the same connected/fused ring system |
+| `[R1$]` | Candidate sites inferred only within the directly attached host ring; symmetry-equivalent backbones are deduplicated before substituent assignment |
 | Common OCSR composites such as `[OR2]` | Conservatively normalized to `O[R2]` only when `R2` is an extracted variable |
 | Label typography such as `R_c`, `R^c`, `R_{c}` | Aligned to `[Rc]` only when the backbone match is unique |
 
@@ -159,9 +159,16 @@ and attempted combination counts.
 
 - Open-ended patent language cannot be exhaustively instantiated without a
   formally bounded fragment ontology.
-- `$` gives no explicit allowed-site set. The current same-ring-system rule is
-  an inference and is always labelled `partial`; it deliberately does not use
-  evaluation labels to choose sites.
+- `$` gives no explicit allowed-site set. The current host-ring rule is an
+  inference and is always labelled `partial`; it deliberately does not use
+  evaluation labels to choose sites. A uniquely identified host ring is
+  enumerated without crossing into another fused, bridged, or spiro ring. If
+  the attachment atom belongs to more than one perceived ring, the observed
+  site is retained and the ambiguity is recorded instead of guessing a ring.
+- Patent locants such as "R1 may be located at position 5 or 6" cannot be
+  enforced from the present pseudo-SMILES and variable-table schema because
+  patent locants are not stable SMILES or RDKit atom indices. Supporting such
+  constraints requires an explicit locant-to-atom mapping.
 - Repeated variable-bearing units such as `[(R1)x]` are not expanded because
   their graph attachment semantics are not uniquely defined by the current
   LLM output schema.

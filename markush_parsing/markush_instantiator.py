@@ -8,7 +8,8 @@ combiner. It supports:
 * finite category expansion through :mod:`fragment_resolver`;
 * linear frequency tokens such as ``[(CH2)n]``;
 * sulfoxide/sulfone-style ``S[(O)m]`` frequency tokens;
-* inferred ring-site enumeration for position variables such as ``[R1$]``;
+* inferred host-ring-site enumeration for position variables such as
+  ``[R1$]``;
 * RDKit sanitization, canonical isomeric SMILES, global deduplication, and
   explicit enumeration limits.
 
@@ -66,7 +67,7 @@ class InstantiationLimits:
 class MarkushInstantiator:
     """Convert a backbone pseudo-SMILES plus variable table to products."""
 
-    schema_version = "1.0"
+    schema_version = "1.1"
 
     def __init__(
         self,
@@ -469,20 +470,54 @@ class MarkushInstantiator:
         return Chem.MolToSmiles(mol, canonical=True, isomericSmiles=True)
 
     @staticmethod
-    def _ring_system_sites(mol: Chem.Mol, anchor_index: int) -> list[int]:
-        atom_rings = [set(ring) for ring in mol.GetRingInfo().AtomRings()]
-        selected = [ring for ring in atom_rings if anchor_index in ring]
-        if not selected:
-            return [anchor_index]
-        system = set().union(*selected)
-        changed = True
-        while changed:
-            changed = False
-            for ring in atom_rings:
-                if ring & system and not ring <= system:
-                    system.update(ring)
-                    changed = True
-        return sorted(system)
+    def _host_ring_sites(
+        mol: Chem.Mol, anchor_index: int
+    ) -> tuple[list[int], dict]:
+        """Return sites on the single ring directly hosting a ``$`` label.
+
+        A position-variable bond drawn on one ring does not imply movement to
+        every ring in the same fused, bridged, or spiro system. When the
+        anchor belongs to exactly one perceived ring, only that ring is
+        enumerated. If graph topology alone leaves more than one possible
+        host ring, retaining the observed site is safer than guessing one or
+        silently crossing into another ring.
+        """
+        containing_rings = []
+        seen_rings = set()
+        for ring in mol.GetRingInfo().AtomRings():
+            ring_key = frozenset(ring)
+            if anchor_index not in ring_key or ring_key in seen_rings:
+                continue
+            seen_rings.add(ring_key)
+            containing_rings.append(sorted(ring_key))
+
+        selection = {
+            "anchor_atom_index": anchor_index,
+            "host_ring_count": len(containing_rings),
+            "candidate_host_rings": containing_rings,
+        }
+        if not containing_rings:
+            selection.update({
+                "mode": "original_site_only",
+                "reason": "position_anchor_not_in_ring",
+                "host_ring_atom_indices": [],
+            })
+            return [anchor_index], selection
+        if len(containing_rings) > 1:
+            selection.update({
+                "mode": "original_site_only",
+                "reason": "host_ring_ambiguous",
+                "host_ring_atom_indices": [],
+            })
+            return [anchor_index], selection
+
+        host_ring = containing_rings[0]
+        selection.update({
+            "mode": "inferred_host_ring",
+            "reason": None,
+            "host_ring_atom_indices": host_ring,
+        })
+        return host_ring, selection
 
     def _expand_one_position_dummy(self, mol: Chem.Mol, atom_map: int) -> tuple[list[Chem.Mol], dict]:
         dummy = next(
@@ -505,7 +540,7 @@ class MarkushInstantiator:
         bond_type = mol.GetBondBetweenAtoms(
             dummy.GetIdx(), anchor_index
         ).GetBondType()
-        sites = self._ring_system_sites(mol, anchor_index)
+        sites, site_selection = self._host_ring_sites(mol, anchor_index)
         candidates = []
         for site in sites:
             if mol.GetAtomWithIdx(site).GetAtomicNum() == 0:
@@ -523,21 +558,29 @@ class MarkushInstantiator:
             except Exception:
                 continue
             candidates.append(candidate)
+        chemically_valid_sites = len(candidates)
         if not candidates:
             candidates = [mol]
+        # First-stage deduplication: symmetry-equivalent attachment sites
+        # produce the same canonical mapped pseudo-structure and are retained
+        # only once, before any concrete substituent assignment is attempted.
         deduplicated = {}
         for candidate in candidates:
             deduplicated.setdefault(self._core_key(candidate), candidate)
         candidates = list(deduplicated.values())
-        return candidates, {
+        report = {
             "atom_map": atom_map,
             "label": dummy.GetProp("_markush_label")
             if dummy.HasProp("_markush_label") else None,
-            "mode": "inferred_ring_system"
-            if len(sites) > 1 else "original_site_only",
             "candidate_sites": len(sites),
+            "chemically_valid_sites": chemically_valid_sites,
             "valid_unique_sites": len(candidates),
+            "duplicate_position_variants_removed": max(
+                0, chemically_valid_sites - len(candidates)
+            ),
         }
+        report.update(site_selection)
+        return candidates, report
 
     def _expand_positions(self, mol: Chem.Mol) -> tuple[list[Chem.Mol], list[dict], bool]:
         position_maps = sorted(
@@ -998,10 +1041,17 @@ class MarkushInstantiator:
             )
             if position_reports:
                 result["position_variation"]["present"] = True
-                result["position_variation"]["strategy"] = (
-                    "inferred_same_ring_system"
-                )
                 result["position_variation"]["reports"].extend(position_reports)
+                position_reasons = {
+                    detail.get("reason")
+                    for report in position_reports
+                    for detail in report.get("details", [])
+                    if detail.get("reason")
+                }
+                for reason in sorted(position_reasons):
+                    warning = f"position_variation_{reason}"
+                    if warning not in result["warnings"]:
+                        result["warnings"].append(warning)
             result["position_variation"]["truncated"] |= position_truncated
             for position_index, position_mol in enumerate(position_variants):
                 backbone_records.append({
@@ -1013,6 +1063,22 @@ class MarkushInstantiator:
                     ),
                     "occurrence_count": len(occurrence_map),
                 })
+
+        if result["position_variation"]["present"]:
+            position_modes = {
+                detail.get("mode")
+                for report in result["position_variation"]["reports"]
+                for detail in report.get("details", [])
+            }
+            if position_modes == {"inferred_host_ring"}:
+                position_strategy = "inferred_host_ring"
+            elif position_modes == {"original_site_only"}:
+                position_strategy = "original_site_only"
+            else:
+                position_strategy = (
+                    "inferred_host_ring_with_original_site_fallback"
+                )
+            result["position_variation"]["strategy"] = position_strategy
 
         # Deduplicate backbones while retaining the first deterministic audit
         # record for equivalent frequency/position expansions.
@@ -1120,7 +1186,7 @@ class MarkushInstantiator:
         if frequency_report.get("values_above_repeat_limit"):
             partial_reasons.append("frequency_values_above_repeat_limit")
         if result["position_variation"]["present"]:
-            partial_reasons.append("position_sites_inferred_from_ring_system")
+            partial_reasons.append("position_sites_inferred_from_host_ring")
         result["warnings"].extend(partial_reasons)
         result["status"] = "partial" if partial_reasons else "complete"
         result["failure_reason"] = None

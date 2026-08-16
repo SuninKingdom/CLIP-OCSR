@@ -176,14 +176,74 @@ class MarkushInstantiatorTests(unittest.TestCase):
         self.assertEqual(result["status"], "partial")
         self.assertGreater(result["product_count"], 1)
         self.assertTrue(result["position_variation"]["present"])
+        self.assertEqual(
+            result["position_variation"]["strategy"],
+            "inferred_host_ring",
+        )
         self.assertIn(
-            "position_sites_inferred_from_ring_system", result["warnings"]
+            "position_sites_inferred_from_host_ring", result["warnings"]
         )
         self.assertTrue(
             all(
                 product["position_assignment"]
                 for product in result["products"]
             )
+        )
+
+    def test_position_variation_deduplicates_symmetric_host_ring_sites(self):
+        result = self.instantiator.instantiate(
+            "Cc1ccccc1[R1$]", {"R1": ["Cl"]}
+        )
+        detail = result["position_variation"]["reports"][0]["details"][0]
+
+        # Six ring atoms are considered. The methyl-bearing atom cannot take
+        # another substituent, and the remaining sites collapse to the three
+        # distinct ortho/meta/para products.
+        self.assertEqual(detail["candidate_sites"], 6)
+        self.assertEqual(detail["chemically_valid_sites"], 5)
+        self.assertEqual(detail["valid_unique_sites"], 3)
+        self.assertEqual(detail["duplicate_position_variants_removed"], 2)
+        self.assertEqual(result["backbone_variants"], 3)
+        self.assertEqual(result["product_count"], 3)
+
+    def test_position_variation_does_not_cross_a_fused_ring(self):
+        result = self.instantiator.instantiate(
+            "c1ccc2ccccc2c1[R1$]", {"R1": ["Cl"]}
+        )
+        detail = result["position_variation"]["reports"][0]["details"][0]
+        host_ring = set(detail["host_ring_atom_indices"])
+
+        self.assertEqual(detail["mode"], "inferred_host_ring")
+        self.assertEqual(detail["host_ring_count"], 1)
+        self.assertEqual(detail["candidate_sites"], 6)
+        self.assertEqual(len(host_ring), 6)
+        self.assertTrue(
+            all(
+                assignment["backbone_atom_index"] in host_ring
+                for product in result["products"]
+                for assignment in product["position_assignment"]
+            )
+        )
+
+    def test_ambiguous_host_ring_keeps_the_observed_site(self):
+        result = self.instantiator.instantiate(
+            "C1CC2([R1$])CCC1C2", {"R1": ["Cl"]}
+        )
+        detail = result["position_variation"]["reports"][0]["details"][0]
+
+        self.assertEqual(
+            result["position_variation"]["strategy"],
+            "original_site_only",
+        )
+        self.assertEqual(detail["mode"], "original_site_only")
+        self.assertEqual(detail["reason"], "host_ring_ambiguous")
+        self.assertGreater(detail["host_ring_count"], 1)
+        self.assertEqual(detail["candidate_sites"], 1)
+        self.assertEqual(result["backbone_variants"], 1)
+        self.assertEqual(result["product_count"], 1)
+        self.assertIn(
+            "position_variation_host_ring_ambiguous",
+            result["warnings"],
         )
 
     def test_label_typography_is_aligned_only_to_the_backbone(self):
