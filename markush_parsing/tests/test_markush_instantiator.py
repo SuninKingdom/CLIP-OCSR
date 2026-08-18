@@ -151,6 +151,17 @@ class MarkushInstantiatorTests(unittest.TestCase):
         self.assertEqual(self.smiles_set(hydrogen), {"c1ccccc1"})
         self.assertEqual(self.smiles_set(deuterium), {"[2H]c1ccccc1"})
 
+    def test_hydro_is_treated_as_a_hydrogen_alias(self):
+        result = self.instantiator.instantiate(
+            "c1ccccc1[R1]", {"R1": ["hydro", "fluoro"]}
+        )
+
+        self.assertEqual(result["status"], "complete")
+        self.assertEqual(result["unresolved_values"], {})
+        self.assertEqual(
+            self.smiles_set(result), {"c1ccccc1", "Fc1ccccc1"}
+        )
+
     def test_frequency_range_uses_one_count_at_every_occurrence(self):
         result = self.instantiator.instantiate(
             "[(CH2)n]O[(CH2)n]", {"n": ["1-2"]}

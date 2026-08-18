@@ -132,7 +132,7 @@ def _fragment(
 
 def _builtin_candidates(key: str) -> list[FragmentCandidate]:
     """Return reviewed mappings for common finite or explicit groups."""
-    if key in {"hydrogen", "h"}:
+    if key in {"hydrogen", "hydro", "h"}:
         return [_candidate(name="hydrogen", kind="hydrogen")]
     if key in {"deuterium", "d"}:
         return [_fragment("deuterium", "[*:1][2H]")]
