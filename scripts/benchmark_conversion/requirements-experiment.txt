@@ -1,0 +1,3 @@
+# RDKit release used by the reported MOL-to-pseudo-SMILES comparison workflow.
+# Keep this separate from the main project environment when necessary.
+rdkit==2022.9.1

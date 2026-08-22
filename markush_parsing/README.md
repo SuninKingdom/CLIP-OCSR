@@ -88,10 +88,39 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 
 ## Evaluation Data
 
-The file `Complete_Markush_Representation.csv` contains source metadata for all
+The file `Markush_MIE54.csv` contains source metadata for all
 54 Markush images used to evaluate the multimodal parsing workflow in the
 paper. It records provenance rather than ground-truth structures; evaluation
 labels are supplied separately with `--labels`.
+
+The file `m2s_pseudo_smiles_conversion_audit.csv` records the reviewed
+CXSMILES-to-pseudo-SMILES conversion for all 103 M2S images. It preserves the
+original labels, automatic conversion output, final manual decision, and
+review notes. Nineteen structures cannot be represented by the current
+pseudo-SMILES notation and therefore intentionally have an empty
+`final_pseudo_smiles`; their limitations are documented by the corresponding
+status and note fields.
+
+The initial automatic candidates were produced with
+[`scripts/benchmark_conversion/cxsmiles_to_pseudo_smiles.py`](../scripts/benchmark_conversion/cxsmiles_to_pseudo_smiles.py)
+and then manually checked. The reviewed `final_pseudo_smiles` and status fields
+in this audit file remain authoritative for evaluation.
+
+The original M2S annotations were obtained from the `m2s` test split of the
+[MarkushGrapher-2 Datasets](https://huggingface.co/datasets/docling-project/MarkushGrapher-2-Datasets),
+which is released under the
+[Creative Commons Attribution 4.0 International License (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+The reviewed CSV is an adapted resource: the original CXSMILES annotations were
+converted to pseudo-SMILES, manually reviewed, and supplemented with conversion
+status and review notes. This derived CSV is distributed under CC BY 4.0.
+Users should credit the original dataset and its authors, link to CC BY 4.0,
+identify these modifications, and cite the associated MarkushGrapher
+publication identified on the source dataset page. This data-specific notice
+does not change the MIT License applied to the repository software.
+
+This conversion-audit file does not contain the `final_pseudo_smiles_all`
+candidate sets used to evaluate positional variables. A scoring label file for
+that evaluation must additionally provide those reviewed candidate sets.
 
 The evaluator accepts the original JSON label format and the reviewed M2S CSV
 format. M2S graphical labels may be combined with its variable labels:
@@ -244,9 +273,9 @@ python markush_parsing/run.py --input image.png --mineru-dir /path/to/mineru_out
 | Metric | Description |
 |--------|-------------|
 | Markush Graphical Accuracy | Exact match accuracy |
-| Variable Recall | Fraction of ground-truth substituents correctly predicted |
-| Variable Precision | Fraction of predicted substituents that match ground truth |
-| Variable F1 | Harmonic mean of dataset macro Precision and macro Recall (MarkushGrapher-2 definition) |
+| Recall | Fraction of ground-truth substituents correctly predicted |
+| Precision | Fraction of predicted substituents that match ground truth |
+| F1 | Harmonic mean of dataset macro Precision and macro Recall (MarkushGrapher-2 definition) |
 
 All dataset samples remain in the primary denominator. Pipeline failures,
 missing predictions, and empty/unscored results receive zero scores. Standalone

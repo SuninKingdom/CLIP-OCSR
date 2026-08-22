@@ -105,6 +105,48 @@ Example input ([`assets/chemical_structure_example.png`](assets/chemical_structu
 
 <img src="assets/chemical_structure_example.png" width="400">
 
+### 5. Evaluate Markush Backbone Recognition
+
+Markush pseudo-SMILES predictions can be evaluated independently of MinerU and
+the LLM:
+
+```bash
+python -m clip_ocsr.evaluation.markush_metrics \
+    --labels /path/to/reviewed_labels.csv \
+    --predictions /path/to/predictions.csv \
+    --output evaluation/metrics.json \
+    --details evaluation/per_sample.jsonl
+```
+
+The evaluator automatically recognizes the column conventions used by the
+reviewed M2S and MIE54 labels (for example, `image_name`,
+`final_pseudo_smiles`, and `final_pseudo_smiles_all`) and common prediction
+columns such as `Image_Name` and `Predicted_SMILES`. Explicit column names can
+also be supplied; run the module with `--help` for the available options.
+
+The reported Markush Graphical Accuracy uses all label rows as the denominator,
+so missing or empty predictions are counted as incorrect. Substitution and
+frequency variations are compared as normalized molecular graphs. For a
+position variable marked by `$`, `pseudo_smiles_all` provides the reviewed set
+of acceptable structures. The same implementation is reused by the complete
+multimodal parsing workflow.
+
+### 6. Normalize Comparison-Model Outputs
+
+The repository also provides auditable converters for normalizing external
+OCSR outputs before applying the same graphical metric. They cover
+MarkushGrapher-2 CXSMILES output and V2000 MOL files predicted by MolScribe,
+MolNexTR, or the standalone ChemEAGLE Image2Graph component. The MOL utility
+defaults to the version-pinned conversion algorithm used in the reported
+comparison experiments and exposes a separate strict mode for new analyses.
+Conversion failures are retained as empty predictions with explicit statuses
+and are not removed from the evaluation denominator.
+
+See
+[`scripts/benchmark_conversion/README.md`](scripts/benchmark_conversion/README.md)
+for the supported representations, provenance, command-line examples, and
+review policy.
+
 ## Multimodal Markush Structure Parsing
 
 In addition to backbone recognition, this repository includes a complete multimodal Markush information extraction workflow. Starting from a Markush description in a document, [MinerU](https://github.com/opendatalab/MinerU) (deployed locally) performs layout analysis and OCR to separate the graphical scaffold from the accompanying textual definitions. The cropped backbone image is processed by CLIP-OCSR to generate a backbone pseudo-SMILES representation, whereas the OCR-derived text is parsed by an LLM to extract structured variable definitions. An optional RDKit post-processing stage combines these outputs and, for finitely resolved definitions, exhaustively writes the unique validated concrete SMILES to plain-text files. Detailed per-product audit output is retained automatically for smaller chemical spaces and can be forced or disabled through the CLI.
@@ -133,7 +175,8 @@ CLIP-OCSR/
 │   ├── inference/              # Inference code
 │   │   └── predict.py          # PyTorch inference pipeline
 │   ├── evaluation/             # Evaluation metrics
-│   │   └── metrics.py          # InChI accuracy + Tanimoto
+│   │   ├── metrics.py          # InChI accuracy + Tanimoto
+│   │   └── markush_metrics.py  # Markush pseudo-SMILES graphical accuracy
 │   └── utils/                  # Utilities
 │       ├── seed.py             # Reproducibility
 │       └── abbrev_group.py     # Abbreviated group expansion
@@ -152,6 +195,7 @@ CLIP-OCSR/
 ├── configs/                    # YAML configuration files
 ├── assets/                     # Tokenizer, abbreviation data, and sample SMILES for Stage 1/2
 ├── scripts/                    # Helper scripts
+│   └── benchmark_conversion/   # Comparison-output conversion + audit tools
 ├── sample_data/                # Sample training data
 └── tests/                      # Unit tests
 ```

@@ -1,181 +1,25 @@
 import json
 import logging
 import os
-import re
 from collections import Counter
 
-from rdkit import Chem
-from rdkit.Chem.MolStandardize import rdMolStandardize
-
+from clip_ocsr.evaluation.markush_metrics import (
+    markush_graphical_accuracy,
+    markush_graphical_evaluation,
+)
 from stable_parser import compute_stable_scores
 
 logger = logging.getLogger(__name__)
 
-# Standard chemistry bracket content to exclude when extracting R-group variables
-EXCLUDE_BRACKET_ITEMS = ['C@H', 'C@', 'C@@H', 'C@@', 'N+', 'O-', 'C-', 'CH3']
-POSITION_VARIABLE_PATTERN = re.compile(r'\[[^\[\]]*\$\]')
-
-
-def _extract_variables(smiles: str, exclude_items: list[str] | None = None) -> list[str]:
-    """Extract R-group variable labels from bracket notation in SMILES.
-
-    e.g. "[R1]C1=CC=C([R2])C=C1" -> ["R1", "R2"]
-    Filters out standard chemistry notations like C@H, N+, etc.
-    """
-    if exclude_items is None:
-        exclude_items = EXCLUDE_BRACKET_ITEMS
-    contents = re.findall(r'\[(.*?)\]', smiles)
-    return [c for c in contents if c not in exclude_items]
-
-
-def _compare_substitution_or_frequency(
-    gt_smiles: str,
-    pred_smiles: str | None,
-    exclude_items: list[str],
-) -> bool:
-    """Compare substitution/frequency variations using compare_subvar3 logic.
-
-    Logic (from compare_subvar3):
-    1. Extract R-group variables from both SMILES
-    2. Check variable multisets match
-    3. Replace each unique variable with a dummy atom (P(C), P(CC), ...)
-    4. Standardize and compare canonical SMILES
-    """
-    if pred_smiles is None:
-        return False
-
-    if gt_smiles == pred_smiles:
-        return True
-
-    vars_gt = _extract_variables(gt_smiles, exclude_items)
-    vars_pred = _extract_variables(pred_smiles, exclude_items)
-
-    if Counter(vars_gt) != Counter(vars_pred):
-        return False
-
-    # Replace variable substituents with real, specific groups
-    unique_vars = list(set(vars_gt))
-    gt_replaced = gt_smiles
-    pred_replaced = pred_smiles
-    for i, var in enumerate(unique_vars):
-        dummy = f"P({ 'C' * (i + 1) })"
-        gt_replaced = gt_replaced.replace(f"[{var}]", dummy)
-        pred_replaced = pred_replaced.replace(f"[{var}]", dummy)
-
-    mol_gt = Chem.MolFromSmiles(gt_replaced)
-    mol_pred = Chem.MolFromSmiles(pred_replaced)
-    if mol_gt is None or mol_pred is None:
-        return False
-
-    mol_gt = rdMolStandardize.Cleanup(mol_gt)
-    mol_pred = rdMolStandardize.Cleanup(mol_pred)
-
-    return Chem.MolToSmiles(mol_gt) == Chem.MolToSmiles(mol_pred)
-
-
-def _normalize_pseudo_smiles_all(value) -> list[str]:
-    """Normalize a saved pseudo-SMILES candidate set."""
-    if value is None:
-        return []
-    if isinstance(value, (list, tuple, set)):
-        return [str(item).strip() for item in value if str(item).strip()]
-    if isinstance(value, str):
-        return [item.strip() for item in value.split(";") if item.strip()]
-    return []
-
-
-def markush_graphical_evaluation(
-    gt_smiles: str,
-    pred_smiles: str | None,
-    pseudo_smiles_all=None,
-    exclude_items: list[str] | None = None,
-) -> dict:
-    """Evaluate a Markush graph and return an auditable decision.
-
-    Substitution and frequency variations use the original graph comparison.
-    For position variations, the prediction must contain the same ``[label$]``
-    multiset and, after removing ``$``, match a structure in
-    ``pseudo_smiles_all``.
-    """
-    if exclude_items is None:
-        exclude_items = EXCLUDE_BRACKET_ITEMS
-
-    candidates = _normalize_pseudo_smiles_all(pseudo_smiles_all)
-    gt_position_variables = POSITION_VARIABLE_PATTERN.findall(gt_smiles or "")
-    method = (
-        "position_variation_smiles_set"
-        if gt_position_variables and candidates
-        else "position_variation_strict_fallback"
-        if gt_position_variables
-        else "substitution_or_frequency_graph"
-    )
-    result = {
-        "markush_graphical_accuracy": False,
-        "graphical_evaluation_method": method,
-        "position_variation_candidate_count": len(candidates),
-        "matched_pseudo_smiles_index": None,
-    }
-
-    if pred_smiles is None:
-        result["graphical_evaluation_reason"] = "missing_prediction"
-        return result
-
-    if gt_smiles == pred_smiles:
-        result.update({
-            "markush_graphical_accuracy": True,
-            "graphical_evaluation_reason": "exact_pseudo_smiles_match",
-        })
-        return result
-
-    if gt_position_variables and candidates:
-        pred_position_variables = POSITION_VARIABLE_PATTERN.findall(pred_smiles)
-        if Counter(gt_position_variables) != Counter(pred_position_variables):
-            result.update({
-                "graphical_evaluation_reason": "position_variable_mismatch",
-                "gt_position_variables": gt_position_variables,
-                "pred_position_variables": pred_position_variables,
-            })
-            return result
-
-        pred_without_dollar = pred_smiles.replace("$", "")
-        for index, candidate in enumerate(candidates):
-            if _compare_substitution_or_frequency(
-                candidate, pred_without_dollar, exclude_items
-            ):
-                result.update({
-                    "markush_graphical_accuracy": True,
-                    "graphical_evaluation_reason": "matched_pseudo_smiles_all",
-                    "matched_pseudo_smiles_index": index,
-                })
-                return result
-        result["graphical_evaluation_reason"] = "no_candidate_match"
-        return result
-
-    matched = _compare_substitution_or_frequency(
-        gt_smiles, pred_smiles, exclude_items
-    )
-    result.update({
-        "markush_graphical_accuracy": matched,
-        "graphical_evaluation_reason": (
-            "canonical_graph_match" if matched else "canonical_graph_mismatch"
-        ),
-    })
-    return result
-
-
-def markush_graphical_accuracy(
-    gt_smiles: str,
-    pred_smiles: str | None,
-    exclude_items: list[str] | None = None,
-    pseudo_smiles_all=None,
-) -> bool:
-    """Backward-compatible boolean wrapper around the detailed evaluator."""
-    return markush_graphical_evaluation(
-        gt_smiles,
-        pred_smiles,
-        pseudo_smiles_all=pseudo_smiles_all,
-        exclude_items=exclude_items,
-    )["markush_graphical_accuracy"]
+# Re-export the graphical metric for compatibility with existing callers.
+__all__ = [
+    "markush_graphical_accuracy",
+    "markush_graphical_evaluation",
+    "evaluate_smiles",
+    "evaluate_single",
+    "compute_aggregate_metrics",
+    "save_results",
+]
 
 
 def evaluate_smiles(
