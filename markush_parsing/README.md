@@ -272,7 +272,7 @@ python markush_parsing/run.py --input image.png --mineru-dir /path/to/mineru_out
 
 | Metric | Description |
 |--------|-------------|
-| Markush Graphical Accuracy | Exact match accuracy |
+| Graphical Accuracy | Structure-level exact accuracy of the predicted backbone pseudo-SMILES |
 | Recall | Fraction of ground-truth substituents correctly predicted |
 | Precision | Fraction of predicted substituents that match ground truth |
 | F1 | Harmonic mean of dataset macro Precision and macro Recall (MarkushGrapher-2 definition) |

@@ -124,12 +124,12 @@ reviewed M2S and MIE54 labels (for example, `image_name`,
 columns such as `Image_Name` and `Predicted_SMILES`. Explicit column names can
 also be supplied; run the module with `--help` for the available options.
 
-The reported Markush Graphical Accuracy uses all label rows as the denominator,
-so missing or empty predictions are counted as incorrect. Substitution and
-frequency variations are compared as normalized molecular graphs. For a
-position variable marked by `$`, `pseudo_smiles_all` provides the reviewed set
-of acceptable structures. The same implementation is reused by the complete
-multimodal parsing workflow.
+The reported Graphical Accuracy (output key `markush_graphical_accuracy`) uses
+all label rows as the denominator, so missing or empty predictions are counted
+as incorrect. Substitution and frequency variations are compared as normalized
+molecular graphs. For a position variable marked by `$`, `pseudo_smiles_all`
+provides the reviewed set of acceptable structures. The same implementation is
+reused by the complete multimodal parsing workflow.
 
 ### 6. Normalize Comparison-Model Outputs
 

@@ -478,7 +478,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Total samples: {summary['total_samples']}")
     print(f"Correct samples: {summary['correct_samples']}")
     print(f"Missing predictions: {summary['missing_predictions']}")
-    print(f"Markush Graphical Accuracy: {accuracy:.2f}%")
+    print(f"Graphical Accuracy: {accuracy:.2f}%")
     if args.output:
         print(f"Aggregate metrics: {args.output}")
     if args.details:
