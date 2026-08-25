@@ -354,7 +354,7 @@ class FragmentResolver:
         records.extend(self._library_name_index.get(key, []))
         candidates = []
         for record in records:
-            raw_smiles = str(record.get("SMILE", "")).strip()
+            raw_smiles = str(record.get("SMILES", "")).strip()
             if raw_smiles.count("[R]") != 1:
                 continue
             fragment_smiles = raw_smiles.replace("[R]", "[*:1]", 1)

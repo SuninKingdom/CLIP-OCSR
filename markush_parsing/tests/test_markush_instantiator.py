@@ -25,7 +25,7 @@ class FragmentResolverTests(unittest.TestCase):
         self.assertEqual(resolver.library_metadata["records"], 7627)
         self.assertEqual(
             resolver.library_metadata["sha256"],
-            "9c0e53d796799aed181a0b854ab5dfae2154ffd016dc56e1a6e93f23b75c417f",
+            "e42a93b7cfbe17e350dab97e68bc97019a75fca18dbdf65021d8997260bcded7",
         )
         self.assertEqual(
             resolver.library_metadata["project_relative_path"],
@@ -55,17 +55,17 @@ class FragmentResolverTests(unittest.TestCase):
             {
                 "Description": "example finite class",
                 "Name": "methyl",
-                "SMILE": "[R]C",
+                "SMILES": "[R]C",
             },
             {
                 "Description": "example finite class",
                 "Name": "ethyl",
-                "SMILE": "[R]CC",
+                "SMILES": "[R]CC",
             },
             {
                 "Description": "example finite class",
                 "Name": "invalid two connectors",
-                "SMILE": "[R]C[R]",
+                "SMILES": "[R]C[R]",
             },
         ]
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -347,7 +347,7 @@ class MarkushInstantiatorTests(unittest.TestCase):
         records = [{
             "Description": "E alkenyl",
             "Name": "E alkenyl",
-            "SMILE": "[R]/C=C/Cl",
+            "SMILES": "[R]/C=C/Cl",
         }]
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "fragments.json")
