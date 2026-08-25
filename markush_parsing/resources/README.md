@@ -5,9 +5,9 @@ migrated from an earlier internal implementation. It is bundled here
 so concrete-product generation has no dependency on another repository.
 
 - Records: 7,627
-- Size: 1,064,729 bytes
-- SHA-256: `9c0e53d796799aed181a0b854ab5dfae2154ffd016dc56e1a6e93f23b75c417f`
-- Record fields used by this project: `Description`, `Name`, and `SMILE`
+- Size: 782,722 bytes
+- SHA-256: `e42a93b7cfbe17e350dab97e68bc97019a75fca18dbdf65021d8997260bcded7`
+- Record fields used by this project: `Description`, `Name`, and `SMILES`
 - Attachment marker in the source data: `[R]`
 
 The resolver validates every selected fragment with RDKit, requires exactly
